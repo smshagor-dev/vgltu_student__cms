@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\User;
 use App\Models\UserNotification;
+use App\Support\WebPushService;
 
 class UserNotificationPublisher
 {
@@ -33,6 +34,7 @@ class UserNotificationPublisher
             })->all();
 
             UserNotification::insert($rows);
+            WebPushService::sendToUsers($users->pluck('id')->all(), $payload);
         });
     }
 
@@ -67,6 +69,7 @@ class UserNotificationPublisher
         }
 
         UserNotification::insert($rows);
+        WebPushService::sendToUsers(collect($rows)->pluck('user_id')->all(), $payload);
     }
 
     public static function sendToUser(int $userId, array $payload): void

@@ -1,6 +1,58 @@
 @extends('layouts.admin_app')
 
 @section('content')
+<style>
+    .duplicate-alert {
+        margin-bottom: 22px;
+        padding: 16px 18px;
+        border-radius: 18px;
+        background: #fff7ed;
+        border: 1px solid rgba(249, 115, 22, 0.2);
+        color: #9a3412;
+    }
+
+    .duplicate-modal-list {
+        display: grid;
+        gap: 14px;
+    }
+
+    .duplicate-modal-item {
+        display: grid;
+        grid-template-columns: 72px minmax(0, 1fr);
+        gap: 14px;
+        padding: 14px;
+        border-radius: 18px;
+        background: #f8fafc;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+
+    .duplicate-modal-item img {
+        width: 72px;
+        height: 72px;
+        object-fit: cover;
+        border-radius: 18px;
+        display: block;
+    }
+
+    .duplicate-modal-reasons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 10px 0;
+    }
+
+    .duplicate-modal-reason {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #ffedd5;
+        color: #c2410c;
+        font-size: 0.78rem;
+        font-weight: 700;
+    }
+</style>
 <div class="admin-page">
     <section class="admin-hero-card">
         <h2>Edit User Information</h2>
@@ -17,6 +69,15 @@
         </div>
     @endif
 
+    @if(($duplicateUsers ?? collect())->isNotEmpty())
+        <div class="duplicate-alert">
+            Duplicate match found for this user. Full name or passport number matches another record.
+            <button type="button" class="btn btn-sm btn-outline-danger ms-2" data-bs-toggle="modal" data-bs-target="#duplicateUsersModal">
+                View Duplicate Users
+            </button>
+        </div>
+    @endif
+
     <section class="admin-form-shell">
         <div class="admin-toolbar">
             <div class="admin-toolbar__title">
@@ -29,7 +90,7 @@
             </span>
         </div>
 
-        <form action="{{ route('admin.users.update', $user->id) }}" method="POST" enctype="multipart/form-data">
+        <form action="{{ route('admin.users.update', $user->id) }}" method="POST" enctype="multipart/form-data" id="editUserForm">
             @csrf
 
             <div class="admin-grid-2">
@@ -170,10 +231,72 @@
             <div class="admin-actions-inline">
                 <button type="submit" class="btn btn-primary">Update User</button>
                 <a href="{{ route('admin.users.view', $user->id) }}" class="btn btn-outline-primary">Back to Profile</a>
+                <button type="submit" form="deleteUserForm" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this user?');">Delete User</button>
             </div>
         </form>
     </section>
 </div>
+
+<form action="{{ route('admin.users.delete', $user->id) }}" method="POST" id="deleteUserForm" style="display:none;">
+    @csrf
+    @method('DELETE')
+</form>
+
+@if(($duplicateUsers ?? collect())->isNotEmpty())
+    <div class="modal fade" id="duplicateUsersModal" tabindex="-1" aria-labelledby="duplicateUsersModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="duplicateUsersModalLabel">Duplicate Users Found</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="duplicate-modal-list">
+                        @foreach ($duplicateUsers as $duplicateUser)
+                            <article class="duplicate-modal-item">
+                                <div>
+                                    <img src="{{ $duplicateUser->photo ? asset('storage/' . $duplicateUser->photo) : asset('storage/default.png') }}" alt="{{ $duplicateUser->full_name }}">
+                                </div>
+
+                                <div>
+                                    <h5 class="mb-1">{{ $duplicateUser->full_name }}</h5>
+                                    <p class="text-muted mb-2">{{ $duplicateUser->email ?: 'No email' }}</p>
+
+                                    <div class="duplicate-modal-reasons">
+                                        @foreach ($duplicateUser->duplicate_match_reasons as $reason)
+                                            <span class="duplicate-modal-reason"><i class="fas fa-link"></i> Match by {{ $reason }}</span>
+                                        @endforeach
+                                    </div>
+
+                                    <div class="admin-grid-2 mb-3">
+                                        <div class="admin-kv-item">
+                                            <span>Passport Number</span>
+                                            <strong>{{ $duplicateUser->studentsData->passport_number ?? 'No passport data' }}</strong>
+                                        </div>
+                                        <div class="admin-kv-item">
+                                            <span>Room</span>
+                                            <strong>{{ $duplicateUser->room_number ?: 'N/A' }}</strong>
+                                        </div>
+                                    </div>
+
+                                    <div class="admin-actions-inline">
+                                        <a href="{{ route('admin.users.view', $duplicateUser->id) }}" class="btn btn-sm btn-primary">Open User</a>
+                                        <a href="{{ route('admin.users.edit', $duplicateUser->id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                        <form action="{{ route('admin.users.delete', $duplicateUser->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this duplicate user?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-danger">Delete User</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </article>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+@endif
 
 <script>
 function toggleOtherDepartment() {
@@ -189,5 +312,14 @@ function toggleOtherDepartment() {
         otherDepartmentInput.removeAttribute("required");
     }
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+    const duplicateModalElement = document.getElementById('duplicateUsersModal');
+
+    if (duplicateModalElement && window.bootstrap && window.bootstrap.Modal) {
+        const duplicateModal = new window.bootstrap.Modal(duplicateModalElement);
+        duplicateModal.show();
+    }
+});
 </script>
 @endsection

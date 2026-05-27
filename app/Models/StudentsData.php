@@ -19,6 +19,19 @@ class StudentsData extends Model
         'visa_expiry_date',
         'visa_photo',
         'green_card_photo',
+        'visa_reminder_90_sent_at',
+        'visa_reminder_75_sent_at',
+        'visa_reminder_60_sent_at',
+        'visa_overdue_10_sent_at',
+    ];
+
+    protected $casts = [
+        'visa_start_date' => 'date',
+        'visa_expiry_date' => 'date',
+        'visa_reminder_90_sent_at' => 'datetime',
+        'visa_reminder_75_sent_at' => 'datetime',
+        'visa_reminder_60_sent_at' => 'datetime',
+        'visa_overdue_10_sent_at' => 'datetime',
     ];
 
     /**

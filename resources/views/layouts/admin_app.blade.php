@@ -885,6 +885,19 @@
                 </div>
             </div>
 
+            <div class="nav-group {{ request()->routeIs('admin.user-edit-permissions.*') ? 'is-open' : '' }}" data-nav-group>
+                <button type="button" class="nav-group-toggle" data-nav-toggle>
+                    <span class="nav-group-title">
+                        <span class="nav-icon"><i class="fas fa-user-lock"></i></span>
+                        <span>User Edit Access</span>
+                    </span>
+                    <i class="fas fa-chevron-down chevron"></i>
+                </button>
+                <div class="nav-submenu">
+                    <a href="{{ route('admin.user-edit-permissions.edit') }}" class="{{ request()->routeIs('admin.user-edit-permissions.*') ? 'is-active' : '' }}" data-menu-item><i class="fas fa-sliders"></i> Edit Permissions</a>
+                </div>
+            </div>
+
             <div class="nav-group {{ request()->is('admin/custom-fields*') || request()->is('admin/form-submissions*') || request()->is('admin/user-custom-data*') ? 'is-open' : '' }}" data-nav-group>
                 <button type="button" class="nav-group-toggle" data-nav-toggle>
                     <span class="nav-group-title">

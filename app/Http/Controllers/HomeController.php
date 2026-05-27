@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\StudentDataStatus;
 use App\Support\PublicSiteData;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -28,7 +29,12 @@ class HomeController extends Controller
      */
     public function index()
     {
-        return view('home');
+        $user = Auth::user()?->loadMissing('emergencyContacts');
+        if ($user) {
+            StudentDataStatus::ensureCompletionReminder($user);
+        }
+
+        return view('home', compact('user'));
     }
 
     public function downloadStudentCard()

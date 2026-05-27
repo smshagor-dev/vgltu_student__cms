@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Support\StudentDataStatus;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -54,6 +55,17 @@ class LoginController extends Controller
     }
 
     protected $redirectTo = '/home';
+
+    protected function authenticated(Request $request, $user)
+    {
+        StudentDataStatus::ensureCompletionReminder($user);
+
+        if (! $user->studentsData()->exists()) {
+            return redirect()
+                ->route('students_data.create')
+                ->with('warning', 'Your passport, visa, and green card information is missing. Please update your student data.');
+        }
+    }
 
     /**
      * Create a new controller instance.

@@ -7,40 +7,240 @@ use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use App\Models\Complaint;
 use App\Models\ContactMessage;
+use Carbon\Carbon;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 
 class AdminDashboardController extends Controller
 {
+    protected function approvedUsers()
+    {
+        return User::approved();
+    }
+
+    protected function studentListQuery(?string $search = null)
+    {
+        $query = $this->approvedUsers()->orderBy('room_number', 'asc');
+
+        $search = trim((string) $search);
+
+        if ($search === '') {
+            return $query;
+        }
+
+        return $query->where(function ($builder) use ($search) {
+            $like = '%' . $search . '%';
+
+            $builder->where('full_name', 'like', $like)
+                ->orWhere('room_number', 'like', $like)
+                ->orWhere('mobile_number', 'like', $like)
+                ->orWhere('country', 'like', $like)
+                ->orWhere('religion', 'like', $like)
+                ->orWhere('course_type', 'like', $like)
+                ->orWhere('department', 'like', $like)
+                ->orWhere('course_language', 'like', $like)
+                ->orWhere('medical_status', 'like', $like);
+        });
+    }
+
+    protected function recentUsersQuery()
+    {
+        return User::with('studentsData')
+            ->where('created_at', '>=', Carbon::now()->subDays(7))
+            ->latest('created_at')
+            ->latest('id');
+    }
+
+    protected function duplicateUsersCollection()
+    {
+        $usersForDuplicateCheck = User::with('studentsData')
+            ->select('id', 'full_name', 'email', 'room_number', 'approved', 'created_at')
+            ->get();
+
+        $duplicateNameKeys = $usersForDuplicateCheck
+            ->filter(fn ($user) => filled($user->full_name))
+            ->groupBy(fn ($user) => mb_strtolower(trim($user->full_name)))
+            ->filter(fn ($group) => $group->count() > 1)
+            ->keys();
+
+        $duplicatePassportKeys = $usersForDuplicateCheck
+            ->filter(fn ($user) => filled(optional($user->studentsData)->passport_number))
+            ->groupBy(fn ($user) => mb_strtolower(trim((string) optional($user->studentsData)->passport_number)))
+            ->filter(fn ($group) => $group->count() > 1)
+            ->keys();
+
+        return $usersForDuplicateCheck
+            ->filter(function ($user) use ($duplicateNameKeys, $duplicatePassportKeys) {
+                $nameKey = mb_strtolower(trim((string) $user->full_name));
+                $passportKey = mb_strtolower(trim((string) optional($user->studentsData)->passport_number));
+
+                return $duplicateNameKeys->contains($nameKey)
+                    || $duplicatePassportKeys->contains($passportKey);
+            })
+            ->map(function ($user) use ($duplicateNameKeys, $duplicatePassportKeys) {
+                $matchReasons = [];
+                $nameKey = mb_strtolower(trim((string) $user->full_name));
+                $passportKey = mb_strtolower(trim((string) optional($user->studentsData)->passport_number));
+
+                if ($duplicateNameKeys->contains($nameKey)) {
+                    $matchReasons[] = 'Name';
+                }
+
+                if ($duplicatePassportKeys->contains($passportKey)) {
+                    $matchReasons[] = 'Passport';
+                }
+
+                $user->duplicate_match_reasons = $matchReasons;
+
+                return $user;
+            })
+            ->sortByDesc('created_at')
+            ->values();
+    }
+
+    protected function duplicateGroupsCollection()
+    {
+        $duplicateUsers = $this->duplicateUsersCollection();
+        $nameBuckets = $duplicateUsers
+            ->filter(fn ($user) => filled($user->full_name))
+            ->groupBy(fn ($user) => 'name:' . mb_strtolower(trim((string) $user->full_name)))
+            ->filter(fn ($group) => $group->count() > 1);
+
+        $passportBuckets = $duplicateUsers
+            ->filter(fn ($user) => filled(optional($user->studentsData)->passport_number))
+            ->groupBy(fn ($user) => 'passport:' . mb_strtolower(trim((string) optional($user->studentsData)->passport_number)))
+            ->filter(fn ($group) => $group->count() > 1);
+
+        $adjacency = [];
+
+        foreach ($duplicateUsers as $user) {
+            $adjacency[$user->id] = $adjacency[$user->id] ?? [];
+        }
+
+        foreach ($nameBuckets as $bucket) {
+            $ids = $bucket->pluck('id')->unique()->values()->all();
+
+            foreach ($ids as $id) {
+                $adjacency[$id] = array_values(array_unique(array_merge($adjacency[$id] ?? [], $ids)));
+            }
+        }
+
+        foreach ($passportBuckets as $bucket) {
+            $ids = $bucket->pluck('id')->unique()->values()->all();
+
+            foreach ($ids as $id) {
+                $adjacency[$id] = array_values(array_unique(array_merge($adjacency[$id] ?? [], $ids)));
+            }
+        }
+
+        $usersById = $duplicateUsers->keyBy('id');
+        $visited = [];
+        $groups = collect();
+
+        foreach ($usersById as $userId => $user) {
+            if (isset($visited[$userId])) {
+                continue;
+            }
+
+            $queue = [$userId];
+            $componentIds = [];
+
+            while (! empty($queue)) {
+                $currentId = array_shift($queue);
+
+                if (isset($visited[$currentId])) {
+                    continue;
+                }
+
+                $visited[$currentId] = true;
+                $componentIds[] = $currentId;
+
+                foreach ($adjacency[$currentId] ?? [] as $neighborId) {
+                    if (! isset($visited[$neighborId])) {
+                        $queue[] = $neighborId;
+                    }
+                }
+            }
+
+            $users = collect($componentIds)
+                ->map(fn ($id) => $usersById->get($id))
+                ->filter()
+                ->sortByDesc('created_at')
+                ->values();
+
+            $firstUser = $users->first();
+            $reasons = $users
+                ->flatMap(fn ($groupUser) => $groupUser->duplicate_match_reasons ?? [])
+                ->unique()
+                ->values();
+
+            $groupType = $reasons->contains('Passport') ? 'Passport' : 'Name';
+            $groupValue = $groupType === 'Passport'
+                ? ($firstUser->studentsData->passport_number ?? 'Unknown')
+                : ($firstUser->full_name ?: 'Unknown');
+
+            $groups->push((object) [
+                'key' => 'group:' . $firstUser->id,
+                'group_type' => $groupType,
+                'group_value' => $groupValue,
+                'reasons' => $reasons,
+                'users' => $users,
+                'count' => $users->count(),
+                'latest_created_at' => optional($firstUser)->created_at,
+            ]);
+        }
+
+        return $groups
+            ->sortByDesc('latest_created_at')
+            ->values();
+    }
+
+    protected function paginateCollection($items, Request $request, int $perPage = 20)
+    {
+        $page = LengthAwarePaginator::resolveCurrentPage();
+        $currentItems = $items->forPage($page, $perPage)->values();
+
+        return new LengthAwarePaginator(
+            $currentItems,
+            $items->count(),
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'pageName' => 'page',
+            ]
+        );
+    }
     
     public function showUsersByCountry($country){
-        $users = User::where('country', $country)->orderBy('room_number')->paginate(20);
+        $users = $this->approvedUsers()->where('country', $country)->orderBy('room_number')->paginate(20);
         return view('admin.user_details', compact('users'));
     }
 
     public function showUsersByReligion($religion){
-        $users = User::where('religion', $religion)->orderBy('room_number')->paginate(20);
+        $users = $this->approvedUsers()->where('religion', $religion)->orderBy('room_number')->paginate(20);
         return view('admin.user_details', compact('users'));
     }
 
     public function showUsersByDepartment($department){
-        $users = User::where('department', $department)->orderBy('room_number')->paginate(20);
+        $users = $this->approvedUsers()->where('department', $department)->orderBy('room_number')->paginate(20);
         return view('admin.user_details', compact('users'));
     }
 
     public function showUsersByCourse($course_type){
-        $users = User::where('course_type', $course_type)->orderBy('room_number')->paginate(20);
+        $users = $this->approvedUsers()->where('course_type', $course_type)->orderBy('room_number')->paginate(20);
         return view('admin.user_details', compact('users'));
     }
     
     public function showUsersByCourseLanguage($course_language)
     {
-        $users = User::where('course_language', $course_language)->orderBy('room_number')->paginate(20);
+        $users = $this->approvedUsers()->where('course_language', $course_language)->orderBy('room_number')->paginate(20);
         return view('admin.user_details', compact('users'));
     }
 
     public function usersByRoom()
     {
-        $rooms = User::query()
+        $rooms = $this->approvedUsers()
             ->select('room_number', DB::raw('COUNT(*) as total_users'))
             ->whereNotNull('room_number')
             ->where('room_number', '!=', '')
@@ -53,7 +253,7 @@ class AdminDashboardController extends Controller
 
     public function usersByRoomShow($roomNumber)
     {
-        $users = User::query()
+        $users = $this->approvedUsers()
             ->where('room_number', $roomNumber)
             ->orderBy('full_name')
             ->paginate(20);
@@ -67,31 +267,34 @@ class AdminDashboardController extends Controller
 
     public function index(Request $request)
     {
-        // Fetch data from the database using the User model
-        $totalStudents = User::count();
-        $totalStudentsList = User::count();
+        $approvedUsers = $this->approvedUsers();
+
+        // Fetch data from the database using approved users only
+        $totalStudents = (clone $approvedUsers)->count();
+        $totalStudentsList = (clone $approvedUsers)->count();
         $totalpendingstudent = User::where('approved', '0')->count();
-        $notCompleteCount = User::where('medical_status', 'Not Complete')->count();
-        $totalBangladeshiStudents = User::where('country', 'Bangladesh')->count();
-        $totalIndianStudents = User::where('country', 'India')->count();
-        $totalNepaliStudents = User::where('country', 'Nepal')->count();
+        $notCompleteCount = (clone $approvedUsers)->where('medical_status', 'Not Complete')->count();
+        $totalBangladeshiStudents = (clone $approvedUsers)->where('country', 'Bangladesh')->count();
+        $totalIndianStudents = (clone $approvedUsers)->where('country', 'India')->count();
+        $totalNepaliStudents = (clone $approvedUsers)->where('country', 'Nepal')->count();
 
         // Students by religion
-        $muslimStudents = User::where('religion', 'Muslim')->count();
-        $hinduStudents = User::where('religion', 'Hindu')->count();
-        $boddhoStudents = User::where('religion', 'Boddho')->count();
-        $cristanStudents = User::where('religion', 'Cristan')->count();
+        $muslimStudents = (clone $approvedUsers)->where('religion', 'Muslim')->count();
+        $hinduStudents = (clone $approvedUsers)->where('religion', 'Hindu')->count();
+        $boddhoStudents = (clone $approvedUsers)->where('religion', 'Boddho')->count();
+        $cristanStudents = (clone $approvedUsers)->where('religion', 'Cristan')->count();
 
         // Students by department
-        $language = User::where('department', 'Prepetory Language Course')->count();
-        $automobileStudents = User::where('department', 'Automobile')->count();
-        $forestryStudents = User::where('department', 'Forestry')->count();
-        $mechanicalStudents = User::where('department', 'Mechanical')->count();
-        $cstStudents = User::where('department', 'Computer Science and Technology')->count();
-        $economicsStudents = User::where('department', 'Economics')->count();
+        $language = (clone $approvedUsers)->where('department', 'Prepetory Language Course')->count();
+        $automobileStudents = (clone $approvedUsers)->where('department', 'Automobile')->count();
+        $forestryStudents = (clone $approvedUsers)->where('department', 'Forestry')->count();
+        $mechanicalStudents = (clone $approvedUsers)->where('department', 'Mechanical')->count();
+        $cstStudents = (clone $approvedUsers)->where('department', 'Computer Science and Technology')->count();
+        $economicsStudents = (clone $approvedUsers)->where('department', 'Economics')->count();
         
         // Fetch other departments
-        $otherDepartments = User::select('department', DB::raw('COUNT(*) as count'))
+        $otherDepartments = $this->approvedUsers()
+            ->select('department', DB::raw('COUNT(*) as count'))
             ->whereNotIn('department', [
                 'Prepetory Language Course',
                 'Automobile',
@@ -104,23 +307,31 @@ class AdminDashboardController extends Controller
             ->get();
     
         // Fetch course/language data
-        $courseLanguages = User::select('course_type', DB::raw('COUNT(*) as count'))
+        $courseLanguages = $this->approvedUsers()
+            ->select('course_type', DB::raw('COUNT(*) as count'))
             ->groupBy('course_type')
             ->get();
 
         // Students fined by course
-        $languageStudents = User::where('course_type', 'Language')->count();
-        $bscStudents = User::where('course_type', 'BSC')->count();
-        $mscStudents = User::where('course_type', 'MSC')->count();
-        $phdStudents = User::where('course_type', 'PHD')->count();
+        $languageStudents = (clone $approvedUsers)->where('course_type', 'Language')->count();
+        $bscStudents = (clone $approvedUsers)->where('course_type', 'BSC')->count();
+        $mscStudents = (clone $approvedUsers)->where('course_type', 'MSC')->count();
+        $phdStudents = (clone $approvedUsers)->where('course_type', 'PHD')->count();
         
         // Students fined by course language
-        $englishStudents = User::where('course_language', 'English')->count();
-        $russianStudents = User::where('course_language', 'Russian')->count();
+        $englishStudents = (clone $approvedUsers)->where('course_language', 'English')->count();
+        $russianStudents = (clone $approvedUsers)->where('course_language', 'Russian')->count();
         
         $pendingComplaints = Complaint::with('user')->where('status', 'pending')->get();
         $pendingComplaintsCount = Complaint::where('status', 'pending')->count();
         $unreadContactMessagesCount = ContactMessage::where('is_read', false)->count();
+        $recentUsers = $this->recentUsersQuery()
+            ->take(10)
+            ->get();
+        $recentUsersCount = $this->recentUsersQuery()->count();
+        $duplicateUsers = $this->duplicateUsersCollection();
+        $duplicateGroups = $this->duplicateGroupsCollection();
+        $duplicateUsersCount = $duplicateGroups->count();
         
 
         // Return the view with the data
@@ -129,14 +340,41 @@ class AdminDashboardController extends Controller
             'muslimStudents', 'hinduStudents', 'boddhoStudents', 'cristanStudents',
             'language', 'automobileStudents', 'forestryStudents', 'mechanicalStudents', 'cstStudents', 'economicsStudents',
             'languageStudents', 'bscStudents', 'mscStudents', 'phdStudents','otherDepartments', 'englishStudents', 'russianStudents','totalStudentsList','notCompleteCount','totalpendingstudent',
-            'pendingComplaints','pendingComplaintsCount','unreadContactMessagesCount'
+            'pendingComplaints','pendingComplaintsCount','unreadContactMessagesCount', 'duplicateUsers', 'duplicateUsersCount', 'duplicateGroups',
+            'recentUsers', 'recentUsersCount'
         ));
         
+    }
+
+    public function duplicateUsersList(Request $request)
+    {
+        $groups = $this->paginateCollection($this->duplicateGroupsCollection(), $request, 12);
+
+        return view('admin.users.audit_list', [
+            'title' => 'Duplicate Users',
+            'description' => 'Users grouped by matching full name or passport number.',
+            'emptyMessage' => 'No duplicate users found right now.',
+            'groups' => $groups,
+            'mode' => 'duplicate-groups',
+        ]);
+    }
+
+    public function recentUsersList(Request $request)
+    {
+        $users = $this->recentUsersQuery()->paginate(20);
+
+        return view('admin.users.audit_list', [
+            'title' => 'New Users in Last 7 Days',
+            'description' => 'Latest user registrations from the past seven days.',
+            'emptyMessage' => 'No new users registered in the last 7 days.',
+            'users' => $users,
+            'mode' => 'recent-users',
+        ]);
     }
     
     public function showByCourseLanguage($course_language)
     {
-        $users = User::where('course_language', $course_language)->get();
+        $users = $this->approvedUsers()->where('course_language', $course_language)->get();
     
         // Debug: Check if $users contains data
         if ($users->isEmpty()) {
@@ -163,7 +401,8 @@ class AdminDashboardController extends Controller
                 'Economics'
             ];
     
-            $otherDepartments = User::whereNotIn('department', $predefinedDepartments)
+            $otherDepartments = $this->approvedUsers()
+                ->whereNotIn('department', $predefinedDepartments)
                 ->whereNotNull('department')
                 ->distinct()
                 ->pluck('department');
@@ -174,27 +413,51 @@ class AdminDashboardController extends Controller
     
      public function studentList(Request $request)
         {
-            $totalStudentsList = User::orderBy('room_number', 'asc')->paginate(20);
+            $search = $request->string('search')->toString();
+            $totalStudentsList = $this->studentListQuery($search)
+                ->paginate(20)
+                ->withQueryString();
             
-            $totalStudentsListmedicalcomplete = User::orderByRaw("FIELD(medical_status, 'Not Complete', 'Complete') DESC")
+            $totalStudentsListmedicalcomplete = $this->approvedUsers()
+                                       ->orderByRaw("FIELD(medical_status, 'Not Complete', 'Complete') DESC")
                                        ->orderBy('medical_status')
                                        ->paginate(20);
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'rows' => view('admin.partials.studentlist_rows', compact('totalStudentsList'))->render(),
+                    'pagination' => $totalStudentsList->links()->render(),
+                    'count' => $totalStudentsList->total(),
+                ]);
+            }
     
-            return view('admin.studentlist', compact('totalStudentsList', 'totalStudentsListmedicalcomplete'));
+            return view('admin.studentlist', compact('totalStudentsList', 'totalStudentsListmedicalcomplete', 'search'));
         }
+
+    public function studentListPrint(Request $request)
+    {
+        $search = $request->string('search')->toString();
+        $students = $this->studentListQuery($search)->get();
+
+        return view('admin.studentlist_print', [
+            'students' => $students,
+            'search' => $search,
+        ]);
+    }
         
         
     public function studentListmedical(Request $request)
     {
         // Fetch and sort students with "Not Complete" first
-        $totalStudentsListmedical = User::where('medical_status', '!=', 'Complete')
+        $totalStudentsListmedical = $this->approvedUsers()
+            ->where('medical_status', '!=', 'Complete')
             ->orderByRaw("FIELD(medical_status, 'Not Complete', 'Complete')")
             ->paginate(20);
         
-         $totalStudentsCount = User::count();
+         $totalStudentsCount = $this->approvedUsers()->count();
          
         // Count students with "Not Complete" status
-        $notCompleteCount = User::where('medical_status', 'Not Complete')->count();
+        $notCompleteCount = $this->approvedUsers()->where('medical_status', 'Not Complete')->count();
     
         return view('admin.studentlistmedical', compact('totalStudentsListmedical', 'totalStudentsCount', 'notCompleteCount'));
     }
@@ -222,8 +485,8 @@ class AdminDashboardController extends Controller
         
             $student->save();
             
-            $medical1NotComplete = User::whereNull('medical1')->count();
-            $medical2NotComplete = User::whereNull('medical2')->count();
+            $medical1NotComplete = $this->approvedUsers()->whereNull('medical1')->count();
+            $medical2NotComplete = $this->approvedUsers()->whereNull('medical2')->count();
         
             return response()->json([
                 'success' => true,

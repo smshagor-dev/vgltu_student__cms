@@ -10,6 +10,7 @@
         "laravel/framework": "^11.9",
         "laravel/tinker": "^2.9",
         "laravel/ui": "^4.5",
+        "minishlink/web-push": "9.0",
         "mpdf/mpdf": "^8.0"
     },
     "require-dev": {

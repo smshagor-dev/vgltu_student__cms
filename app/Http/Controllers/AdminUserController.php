@@ -12,6 +12,7 @@ use App\Models\UserCustomField;
 use App\Models\UserFieldData;
 use Illuminate\Support\Facades\Hash;
 use App\Support\ImageCompressor;
+use App\Support\UserEmailService;
 
 class AdminUserController extends Controller
 {
@@ -34,7 +35,7 @@ class AdminUserController extends Controller
     // View user details
     public function view($id)
     {
-        $user = User::with('studentsData')->find($id);
+        $user = User::with(['studentsData', 'emergencyContacts'])->find($id);
         if (!$user) {
             return redirect()->route('admin.dashboard')->with('error', 'User not found');
         }
@@ -108,7 +109,43 @@ class AdminUserController extends Controller
     public function edit($id)
     {
         $user = User::with('studentsData')->findOrFail($id);
-        return view('admin.users.edit', compact('user'));
+        $duplicateUsers = User::with('studentsData')
+            ->where('id', '!=', $user->id)
+            ->where(function ($query) use ($user) {
+                $userPassportNumber = trim((string) optional($user->studentsData)->passport_number);
+
+                if (filled($user->full_name)) {
+                    $query->orWhereRaw('LOWER(TRIM(full_name)) = ?', [mb_strtolower(trim((string) $user->full_name))]);
+                }
+
+                if (filled($userPassportNumber)) {
+                    $query->orWhereHas('studentsData', function ($studentsDataQuery) use ($userPassportNumber) {
+                        $studentsDataQuery->whereRaw('LOWER(TRIM(passport_number)) = ?', [mb_strtolower($userPassportNumber)]);
+                    });
+                }
+            })
+            ->get()
+            ->map(function ($duplicateUser) use ($user) {
+                $reasons = [];
+                $userPassportNumber = mb_strtolower(trim((string) optional($user->studentsData)->passport_number));
+                $duplicatePassportNumber = mb_strtolower(trim((string) optional($duplicateUser->studentsData)->passport_number));
+
+                if (mb_strtolower(trim((string) $duplicateUser->full_name)) === mb_strtolower(trim((string) $user->full_name))) {
+                    $reasons[] = 'Name';
+                }
+
+                if (filled($userPassportNumber) && $userPassportNumber === $duplicatePassportNumber) {
+                    $reasons[] = 'Passport';
+                }
+
+                $duplicateUser->duplicate_match_reasons = $reasons;
+
+                return $duplicateUser;
+            })
+            ->filter(fn ($duplicateUser) => ! empty($duplicateUser->duplicate_match_reasons))
+            ->values();
+
+        return view('admin.users.edit', compact('user', 'duplicateUsers'));
     }
     
     public function update(Request $request, $id)
@@ -206,13 +243,16 @@ class AdminUserController extends Controller
     {
         // Find the user by ID
         $user = User::findOrFail($id);
+        $newPassword = '1234567890';
 
         // Set the new password
-        $user->password = Hash::make('1234567890'); // Securely hash the password
+        $user->password = Hash::make($newPassword); // Securely hash the password
+        $user->registration_password_plain = $newPassword;
         $user->save();
+        UserEmailService::sendPasswordReset($user, $newPassword);
 
         // Redirect with success message
-        return redirect()->back()->with('success', 'User password has been reset successfully.');
+        return redirect()->back()->with('success', 'User password has been reset successfully and emailed to the user.');
     }
     
 }

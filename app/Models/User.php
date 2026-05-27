@@ -10,6 +10,8 @@ use Illuminate\Notifications\Notifiable;
 use App\Models\StudentsData;
 use App\Models\CampaignSubmission;
 use App\Models\UserNotification;
+use App\Models\PushSubscription;
+use App\Models\EmergencyContact;
 
 class User extends Authenticatable
 {
@@ -100,6 +102,16 @@ class User extends Authenticatable
     public function userNotifications()
     {
         return $this->hasMany(UserNotification::class)->latest();
+    }
+
+    public function pushSubscriptions()
+    {
+        return $this->hasMany(PushSubscription::class);
+    }
+
+    public function emergencyContacts()
+    {
+        return $this->hasMany(EmergencyContact::class)->latest();
     }
 
 

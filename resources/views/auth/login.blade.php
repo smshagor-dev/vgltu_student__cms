@@ -370,7 +370,7 @@
                             {{ __('Remember Me') }}
                         </label>
                     </div>
-                    <a href="javascript:void(0);" onclick="showResetMessage()">{{ __('Forgot Your Password?') }}</a>
+                    <a href="{{ route('password.request') }}">{{ __('Forgot Your Password?') }}</a>
                 </div>
 
                 <button type="submit" class="login-submit">{{ __('Login') }}</button>
@@ -385,17 +385,6 @@
 </section>
 
 <script>
-    function showResetMessage() {
-        const message = "To reset your password, please contact:\n\n" +
-            "Parvez: +79397713564\n" +
-            "Shagor: +79954949836\n\n" +
-            "Click OK to call.";
-
-        if (confirm(message)) {
-            window.location.href = "tel:+79397713564";
-        }
-    }
-
     document.addEventListener('DOMContentLoaded', function () {
         const togglePasswordButton = document.getElementById('togglePassword');
         const passwordInput = document.getElementById('password');

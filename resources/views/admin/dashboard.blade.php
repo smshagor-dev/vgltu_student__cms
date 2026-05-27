@@ -164,6 +164,92 @@
     .tone-slate { background: linear-gradient(135deg, #334155, #0f172a); }
     .tone-sky { background: linear-gradient(135deg, #0284c7, #0369a1); }
     .tone-emerald { background: linear-gradient(135deg, #10b981, #047857); }
+    .tone-amber { background: linear-gradient(135deg, #d97706, #b45309); }
+    .tone-indigo { background: linear-gradient(135deg, #4f46e5, #312e81); }
+
+    .dashboard-list {
+        display: grid;
+        gap: 14px;
+    }
+
+    .dashboard-list-item {
+        display: grid;
+        gap: 10px;
+        padding: 18px;
+        border-radius: 20px;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+
+    .dashboard-list-item__top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .dashboard-list-item h4 {
+        margin: 0 0 6px;
+        font-size: 1rem;
+    }
+
+    .dashboard-list-item p {
+        margin: 0;
+        color: #64748b;
+    }
+
+    .dashboard-list-item__meta {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    }
+
+    .dashboard-mini-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .dashboard-mini-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #fff7ed;
+        color: #c2410c;
+        font-size: 0.78rem;
+        font-weight: 700;
+    }
+
+    .dashboard-status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 700;
+    }
+
+    .dashboard-status-pill.is-approved {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .dashboard-status-pill.is-pending {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .dashboard-empty {
+        padding: 18px;
+        border-radius: 20px;
+        background: #f8fafc;
+        color: #64748b;
+        border: 1px dashed rgba(148, 163, 184, 0.4);
+    }
 
     @media (max-width: 991.98px) {
         .dashboard-section-grid.two-col {
@@ -232,6 +318,20 @@
                 <span class="dashboard-stat__label">Contact Messages</span>
                 <span class="dashboard-stat__value">{{ $unreadContactMessagesCount }}</span>
                 <span class="dashboard-stat__hint">Unread website inbox</span>
+            </a>
+
+            <a href="{{ route('admin.audit.duplicate-users') }}" class="dashboard-stat tone-amber">
+                <span class="dashboard-stat__icon"><i class="fas fa-copy"></i></span>
+                <span class="dashboard-stat__label">Duplicate Users</span>
+                <span class="dashboard-stat__value">{{ $duplicateUsersCount }}</span>
+                <span class="dashboard-stat__hint">Matched by name or passport number</span>
+            </a>
+
+            <a href="{{ route('admin.audit.recent-users') }}" class="dashboard-stat tone-indigo">
+                <span class="dashboard-stat__icon"><i class="fas fa-user-plus"></i></span>
+                <span class="dashboard-stat__label">Last 7 Days</span>
+                <span class="dashboard-stat__value">{{ $recentUsersCount }}</span>
+                <span class="dashboard-stat__hint">New user registrations</span>
             </a>
         </div>
     </section>

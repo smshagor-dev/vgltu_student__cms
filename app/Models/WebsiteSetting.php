@@ -39,11 +39,13 @@ class WebsiteSetting extends Model
         'smtp_from_address',
         'smtp_from_name',
         'search_placeholder',
+        'user_editable_fields',
     ];
 
     protected $casts = [
         'available_languages' => 'array',
         'smtp_enabled' => 'boolean',
         'smtp_password' => 'encrypted',
+        'user_editable_fields' => 'array',
     ];
 }

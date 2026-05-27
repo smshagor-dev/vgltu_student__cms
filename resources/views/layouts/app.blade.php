@@ -13,6 +13,7 @@
     $readNotifications = $allNotifications->filter(fn ($notification) => $notification->read_at !== null)->values();
     $notificationCount = $unreadNotifications->count();
     $browserNotificationsEnabled = (bool) ($authUser?->browser_notifications_enabled ?? false);
+    $webPushPublicKey = config('services.webpush.public_key');
     $unreadBrowserNotifications = $unreadNotifications->map(function ($notification) {
         return [
             'id' => $notification->id,
@@ -1351,7 +1352,7 @@
                             <button type="submit" class="edu-login-modal__submit">Login</button>
 
                             <div class="edu-login-modal__links">
-                                <a href="javascript:void(0);" onclick="showResetMessage()">Forgot Your Password?</a>
+                                <a href="{{ route('password.request') }}">Forgot Your Password?</a>
                             </div>
                             <div class="edu-login-modal__links">
                                 <span>Don't have an account?</span>
@@ -1385,14 +1386,14 @@
                     </div>
                     <div class="modal-body">
                         <div class="edu-notification-tools">
-                            <div class="edu-notification-chip">
+                            <div class="edu-notification-chip" data-notification-count-label>
                                 <i class="far fa-bell"></i>
                                 {{ $notificationCount }} unread
                             </div>
                             <div class="edu-notification-tools__actions">
                                 <button type="button" class="edu-notification-secondary-btn" id="markAllNotificationsRead">Mark all as read</button>
-                                <button type="button" class="edu-notification-primary-btn" id="toggleBrowserNotifications">
-                                    {{ $browserNotificationsEnabled ? 'Browser Alerts Enabled' : 'Enable Browser Alerts' }}
+                                <button type="button" class="edu-notification-primary-btn" id="toggleBrowserNotifications" {{ empty($webPushPublicKey) ? 'disabled' : '' }}>
+                                    {{ empty($webPushPublicKey) ? 'Push Alerts Unavailable' : ($browserNotificationsEnabled ? 'Disable Push Alerts' : 'Enable Push Alerts') }}
                                 </button>
                             </div>
                         </div>
@@ -1409,7 +1410,7 @@
                             </li>
                         </ul>
 
-                        <div class="tab-content">
+                        <div class="tab-content" id="desktopNotificationTabContent">
                             @foreach ($notificationGroups as $groupKey => $groupNotifications)
                                 <div class="tab-pane fade {{ $groupKey === 'all' ? 'show active' : '' }}" id="notification-{{ $groupKey }}" role="tabpanel">
                                     @if ($groupNotifications->isEmpty())
@@ -1465,7 +1466,7 @@
             </div>
             <div class="offcanvas-body">
                 <div class="edu-notification-tools">
-                    <div class="edu-notification-chip">
+                    <div class="edu-notification-chip" data-notification-count-label>
                         <i class="far fa-bell"></i>
                         {{ $notificationCount }} unread
                     </div>
@@ -1486,7 +1487,7 @@
                     </li>
                 </ul>
 
-                <div class="tab-content">
+                <div class="tab-content" id="mobileNotificationTabContent">
                     @foreach ($notificationGroups as $groupKey => $groupNotifications)
                         <div class="tab-pane fade {{ $groupKey === 'all' ? 'show active' : '' }}" id="mobile-notification-{{ $groupKey }}" role="tabpanel">
                             @if ($groupNotifications->isEmpty())
@@ -1501,7 +1502,7 @@
                                         <a class="edu-mobile-notification-item" href="{{ route('notifications.open', $notification) }}">
                                             <div class="edu-mobile-notification-item__top">
                                                 <div class="edu-mobile-notification-item__icon">
-                                                    <i class="{{ $notification->icon ?: 'far fa-bell' }}"></i>
+                                                    <i class="{{ filled(trim((string) $notification->icon)) ? $notification->icon : 'far fa-bell' }}"></i>
                                                 </div>
                                                 <div class="edu-mobile-notification-item__content">
                                                     <strong>{{ $notification->title }}</strong>
@@ -1649,25 +1650,16 @@
     @endauth
 
     <script>
-        function showResetMessage() {
-            const message = "To reset your password, please contact:\n\n"
-                + "Parvez: +79397713564\n"
-                + "Shagor: +79954949836\n\n"
-                + "Click OK to call.";
-
-            if (confirm(message)) {
-                window.location.href = "tel:+79397713564";
-            }
-        }
-
         document.addEventListener('DOMContentLoaded', function () {
             const browserNotificationToggle = document.getElementById('toggleBrowserNotifications');
             const markAllNotificationsRead = document.getElementById('markAllNotificationsRead');
             const mobileMarkAllNotificationsRead = document.getElementById('mobileMarkAllNotificationsRead');
-            const notificationRows = document.querySelectorAll('.edu-notification-row');
             const notificationCountBadges = document.querySelectorAll('.edu-notification-count');
-            const notificationCountLabels = document.querySelectorAll('.edu-notification-chip');
+            const notificationCountLabels = document.querySelectorAll('[data-notification-count-label]');
             const mobileDrawerLinks = document.querySelectorAll('.edu-mobile-drawer a[href]');
+            const desktopNotificationTabContent = document.getElementById('desktopNotificationTabContent');
+            const mobileNotificationTabContent = document.getElementById('mobileNotificationTabContent');
+            const webPushPublicKey = @json($webPushPublicKey);
             let unreadBrowserNotifications = @json($unreadBrowserNotifications);
             let browserNotificationsEnabled = @json($browserNotificationsEnabled);
             let currentUnreadCount = unreadBrowserNotifications.length;
@@ -1709,104 +1701,256 @@
                 });
             };
 
-            const showBrowserNotifications = function () {
-                if (!window.Notification || Notification.permission !== 'granted' || !browserNotificationsEnabled) {
+            const escapeHtml = function (value) {
+                return String(value || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            };
+
+            const buildDesktopNotificationPanel = function (groupKey, notifications) {
+                if (!notifications.length) {
+                    return '<div class="tab-pane fade ' + (groupKey === 'all' ? 'show active' : '') + '" id="notification-' + groupKey + '" role="tabpanel">'
+                        + '<div class="edu-notification-empty"><i class="far fa-bell"></i><strong>No ' + groupKey + ' notifications</strong><span>We will show updates here when they arrive.</span></div>'
+                        + '</div>';
+                }
+
+                const rows = notifications.map(function (notification) {
+                    const statusClass = notification.read_at ? 'edu-notification-status--read' : 'edu-notification-status--unread';
+                    const statusLabel = notification.read_at ? 'Read' : 'Unread';
+
+                    return '<tr class="edu-notification-row" data-open-url="' + escapeHtml(notification.open_url) + '">'
+                        + '<td><div class="edu-notification-row-title">' + escapeHtml(notification.title) + '</div></td>'
+                        + '<td><div class="edu-notification-row-description">' + escapeHtml(notification.description || 'No extra details provided.') + '</div></td>'
+                        + '<td><span class="edu-notification-status ' + statusClass + '">' + statusLabel + '</span></td>'
+                        + '<td>' + escapeHtml(notification.created_at || '') + '</td>'
+                        + '</tr>';
+                }).join('');
+
+                return '<div class="tab-pane fade ' + (groupKey === 'all' ? 'show active' : '') + '" id="notification-' + groupKey + '" role="tabpanel">'
+                    + '<div class="edu-notification-table-wrap"><table class="table edu-notification-table"><thead><tr><th>Title</th><th>Description</th><th>Status</th><th>Date</th></tr></thead><tbody>'
+                    + rows
+                    + '</tbody></table></div></div>';
+            };
+
+            const buildMobileNotificationPanel = function (groupKey, notifications) {
+                if (!notifications.length) {
+                    return '<div class="tab-pane fade ' + (groupKey === 'all' ? 'show active' : '') + '" id="mobile-notification-' + groupKey + '" role="tabpanel">'
+                        + '<div class="edu-notification-empty"><i class="far fa-bell"></i><strong>No ' + groupKey + ' notifications</strong><span>We will show updates here when they arrive.</span></div>'
+                        + '</div>';
+                }
+
+                const items = notifications.map(function (notification) {
+                    const statusClass = notification.read_at ? 'edu-notification-status--read' : 'edu-notification-status--unread';
+                    const statusLabel = notification.read_at ? 'Read' : 'Unread';
+
+                    return '<a class="edu-mobile-notification-item" href="' + escapeHtml(notification.open_url) + '">'
+                        + '<div class="edu-mobile-notification-item__top">'
+                        + '<div class="edu-mobile-notification-item__icon"><i class="' + escapeHtml(notification.icon && notification.icon.trim() ? notification.icon : 'far fa-bell') + '"></i></div>'
+                        + '<div class="edu-mobile-notification-item__content"><strong>' + escapeHtml(notification.title) + '</strong><span>' + escapeHtml(notification.description || 'No extra details provided.') + '</span></div>'
+                        + '</div>'
+                        + '<div class="edu-mobile-notification-item__meta"><span class="edu-notification-status ' + statusClass + '">' + statusLabel + '</span><span class="text-muted small">' + escapeHtml(notification.created_at || '') + '</span></div>'
+                        + '</a>';
+                }).join('');
+
+                return '<div class="tab-pane fade ' + (groupKey === 'all' ? 'show active' : '') + '" id="mobile-notification-' + groupKey + '" role="tabpanel">'
+                    + '<div class="edu-mobile-notification-list">' + items + '</div></div>';
+            };
+
+            const renderNotificationPanels = function (notifications) {
+                const groups = {
+                    all: notifications,
+                    unread: notifications.filter(function (notification) {
+                        return !notification.read_at;
+                    }),
+                    read: notifications.filter(function (notification) {
+                        return !!notification.read_at;
+                    }),
+                };
+
+                if (desktopNotificationTabContent) {
+                    desktopNotificationTabContent.innerHTML = Object.keys(groups).map(function (groupKey) {
+                        return buildDesktopNotificationPanel(groupKey, groups[groupKey]);
+                    }).join('');
+                }
+
+                if (mobileNotificationTabContent) {
+                    mobileNotificationTabContent.innerHTML = Object.keys(groups).map(function (groupKey) {
+                        return buildMobileNotificationPanel(groupKey, groups[groupKey]);
+                    }).join('');
+                }
+            };
+
+            const setPushToggleLabel = function () {
+                if (!browserNotificationToggle) {
                     return;
                 }
 
-                let shownNotifications = [];
-                try {
-                    shownNotifications = JSON.parse(window.localStorage.getItem('shownBrowserNotifications') || '[]');
-                } catch (error) {
-                    shownNotifications = [];
+                if (!webPushPublicKey) {
+                    browserNotificationToggle.textContent = 'Push Alerts Unavailable';
+                    browserNotificationToggle.disabled = true;
+                    return;
                 }
 
-                unreadBrowserNotifications.forEach(function (notificationItem) {
-                    if (shownNotifications.includes(notificationItem.id)) {
-                        return;
-                    }
-
-                    const browserNotice = new Notification(notificationItem.title, {
-                        body: notificationItem.description || 'Open the portal to view this notification.',
-                    });
-
-                    browserNotice.onclick = function () {
-                        window.focus();
-                        window.location.href = notificationItem.open_url;
-                    };
-
-                    shownNotifications.push(notificationItem.id);
-                });
-
-                window.localStorage.setItem('shownBrowserNotifications', JSON.stringify(shownNotifications));
+                browserNotificationToggle.disabled = false;
+                browserNotificationToggle.textContent = browserNotificationsEnabled
+                    ? 'Disable Push Alerts'
+                    : 'Enable Push Alerts';
             };
 
             const syncNotificationsFeed = async function () {
                 try {
                     const response = await window.axios.get('{{ route('notifications.feed') }}');
                     const payload = response.data || {};
+                    const notifications = payload.notifications || [];
 
-                    unreadBrowserNotifications = (payload.notifications || []).filter(function (notificationItem) {
+                    unreadBrowserNotifications = notifications.filter(function (notificationItem) {
                         return !notificationItem.read_at;
                     });
 
+                    renderNotificationPanels(notifications);
                     renderUnreadCount(Number(payload.unread_count || 0));
-                    showBrowserNotifications();
                 } catch (error) {
                     console.error('Unable to refresh notifications feed.', error);
                 }
             };
 
+            const urlBase64ToUint8Array = function (base64String) {
+                const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+                const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+                const rawData = window.atob(base64);
+                const outputArray = new Uint8Array(rawData.length);
+
+                for (let i = 0; i < rawData.length; ++i) {
+                    outputArray[i] = rawData.charCodeAt(i);
+                }
+
+                return outputArray;
+            };
+
+            const unsubscribeFromPush = async function (subscription) {
+                if (subscription) {
+                    await subscription.unsubscribe();
+                }
+
+                await window.axios.delete('{{ route('notifications.push-subscriptions.destroy') }}', {
+                    data: {
+                        endpoint: subscription ? subscription.endpoint : null,
+                    },
+                });
+
+                browserNotificationsEnabled = false;
+                setPushToggleLabel();
+            };
+
+            const syncPushSubscriptionState = async function () {
+                if (!webPushPublicKey || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+                    setPushToggleLabel();
+                    return;
+                }
+
+                try {
+                    const registration = await navigator.serviceWorker.ready;
+                    const existingSubscription = await registration.pushManager.getSubscription();
+
+                    if (!existingSubscription && browserNotificationsEnabled) {
+                        await window.axios.delete('{{ route('notifications.push-subscriptions.destroy') }}', {
+                            data: {
+                                endpoint: null,
+                            },
+                        });
+                        browserNotificationsEnabled = false;
+                    }
+
+                    setPushToggleLabel();
+                } catch (error) {
+                    console.error('Unable to sync push subscription state.', error);
+                    setPushToggleLabel();
+                }
+            };
+
             if (browserNotificationToggle) {
+                setPushToggleLabel();
+
                 browserNotificationToggle.addEventListener('click', async function () {
-                    if (!window.Notification) {
-                        window.alert('This browser does not support desktop notifications.');
+                    if (!webPushPublicKey) {
+                        window.alert('Web push is not configured yet on the server.');
                         return;
                     }
 
-                    const permission = Notification.permission === 'granted'
-                        ? 'granted'
-                        : await Notification.requestPermission();
-
-                    if (permission !== 'granted') {
-                        window.alert('Browser notification permission was not granted.');
+                    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                        window.alert('This browser does not support push notifications.');
                         return;
                     }
 
-                    await window.axios.post('{{ route('notifications.browser-preference') }}', {
-                        enabled: true,
-                    });
+                    browserNotificationToggle.disabled = true;
 
-                    browserNotificationsEnabled = true;
-                    this.textContent = 'Browser Alerts Enabled';
-                    renderUnreadCount(currentUnreadCount);
-                    showBrowserNotifications();
+                    try {
+                        const registration = await navigator.serviceWorker.ready;
+                        const existingSubscription = await registration.pushManager.getSubscription();
+
+                        if (existingSubscription && browserNotificationsEnabled) {
+                            await unsubscribeFromPush(existingSubscription);
+                            return;
+                        }
+
+                        const permission = Notification.permission === 'granted'
+                            ? 'granted'
+                            : await Notification.requestPermission();
+
+                        if (permission !== 'granted') {
+                            window.alert('Push notification permission was not granted.');
+                            return;
+                        }
+
+                        const subscription = existingSubscription || await registration.pushManager.subscribe({
+                            userVisibleOnly: true,
+                            applicationServerKey: urlBase64ToUint8Array(webPushPublicKey),
+                        });
+
+                        await window.axios.post('{{ route('notifications.push-subscriptions.store') }}', {
+                            subscription: subscription.toJSON(),
+                        });
+
+                        browserNotificationsEnabled = true;
+                        setPushToggleLabel();
+                    } catch (error) {
+                        console.error('Unable to update push subscription.', error);
+                        window.alert('Unable to update push notifications right now.');
+                    } finally {
+                        browserNotificationToggle.disabled = false;
+                    }
                 });
             }
 
             if (markAllNotificationsRead) {
                 markAllNotificationsRead.addEventListener('click', async function () {
                     await window.axios.post('{{ route('notifications.read-all') }}');
-                    window.location.reload();
+                    await syncNotificationsFeed();
                 });
             }
 
             if (mobileMarkAllNotificationsRead) {
                 mobileMarkAllNotificationsRead.addEventListener('click', async function () {
                     await window.axios.post('{{ route('notifications.read-all') }}');
-                    window.location.reload();
+                    await syncNotificationsFeed();
                 });
             }
 
-            notificationRows.forEach(function (row) {
-                row.addEventListener('click', function () {
-                    const openUrl = this.getAttribute('data-open-url');
-                    if (!openUrl) {
-                        return;
-                    }
+            document.addEventListener('click', function (event) {
+                const row = event.target.closest('.edu-notification-row');
+                if (!row) {
+                    return;
+                }
 
-                    window.location.href = openUrl;
-                });
+                const openUrl = row.getAttribute('data-open-url');
+                if (!openUrl) {
+                    return;
+                }
+
+                window.location.href = openUrl;
             });
 
             mobileDrawerLinks.forEach(function (link) {
@@ -1858,9 +2002,9 @@
                 });
             });
 
-            showBrowserNotifications();
-
             window.setInterval(syncNotificationsFeed, 15000);
+            syncNotificationsFeed();
+            syncPushSubscriptionState();
 
             @if (old('login_modal'))
                 const loginModalElement = document.getElementById('loginModal');

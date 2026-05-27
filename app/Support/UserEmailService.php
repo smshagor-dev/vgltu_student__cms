@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Campaign;
 use App\Models\User;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -57,6 +58,32 @@ class UserEmailService
                 'notificationTitle' => $notificationTitle,
                 'notificationDescription' => $notificationDescription,
                 'campaignUrl' => route('campaigns.show', $campaign),
+            ])->render()
+        );
+    }
+
+    public static function sendVisaOverdueReminder(User $user, CarbonInterface $expiryDate, string $editUrl): void
+    {
+        self::send(
+            $user->email,
+            'Urgent: Update your expired visa information',
+            view('emails.visa-overdue-reminder', [
+                'user' => $user,
+                'expiryDate' => $expiryDate,
+                'editUrl' => $editUrl,
+            ])->render()
+        );
+    }
+
+    public static function sendPasswordReset(User $user, string $plainPassword): void
+    {
+        self::send(
+            $user->email,
+            'Your account password has been reset',
+            view('emails.user-password-reset', [
+                'user' => $user,
+                'plainPassword' => $plainPassword,
+                'loginUrl' => route('login'),
             ])->render()
         );
     }

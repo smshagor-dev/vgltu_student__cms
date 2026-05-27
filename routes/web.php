@@ -40,10 +40,12 @@ use App\Http\Controllers\Admin\StudyDestinationController as AdminStudyDestinati
 use App\Http\Controllers\Admin\CampaignController as AdminCampaignController;
 use App\Http\Controllers\Admin\CampaignSubmissionController as AdminCampaignSubmissionController;
 use App\Http\Controllers\Admin\AdminNotificationController;
+use App\Http\Controllers\Admin\UserEditPermissionController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\ContactMessageController;
 use App\Http\Controllers\CoursePageController;
 use App\Http\Controllers\UserNotificationController;
+use App\Http\Controllers\PushSubscriptionController;
 
 
 // Route::get('/', function () {
@@ -54,6 +56,7 @@ Route::get('/', [WelcomeController::class, 'index'])->name('welcome');
 Route::redirect('/vgltu-home', '/');
 Route::get('/all-students', [WelcomeController::class, 'allStudents'])->name('students.all');
 Route::get('/all-passed-students', [WelcomeController::class, 'allPassedStudents'])->name('passed-students.all');
+Route::post('/alumni-network/submit', [StudentController::class, 'submitAlumni'])->name('alumni-network.submit');
 Route::get('/all-photo-galleries', [WelcomeController::class, 'allPhotoCategories'])->name('photo-galleries.all');
 Route::get('/all-video-galleries', [WelcomeController::class, 'allVideoCategories'])->name('video-galleries.all');
 Route::get('/study-destinations/{slug}', [StudyDestinationController::class, 'show'])->name('study-destinations.show');
@@ -141,6 +144,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/notifications/{notification}/read', [UserNotificationController::class, 'markRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [UserNotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::post('/notifications/browser-preference', [UserNotificationController::class, 'browserPreference'])->name('notifications.browser-preference');
+    Route::post('/notifications/push-subscriptions', [PushSubscriptionController::class, 'subscribe'])->name('notifications.push-subscriptions.store');
+    Route::delete('/notifications/push-subscriptions', [PushSubscriptionController::class, 'unsubscribe'])->name('notifications.push-subscriptions.destroy');
     Route::get('/notifications/feed', [UserNotificationController::class, 'feed'])->name('notifications.feed');
 });
 
@@ -178,6 +183,7 @@ Route::get('admin/users/list', [AdminUserController::class, 'index'])->name('adm
 
 // Student List
 Route::get('/admin/studentlist', [AdminDashboardController::class, 'studentList'])->name('admin.studentlist');
+Route::get('/admin/studentlist/print', [AdminDashboardController::class, 'studentListPrint'])->name('admin.studentlist.print');
 
 Route::get('/admin/studentlistmedical', [AdminDashboardController::class, 'studentListmedical'])->name('admin.studentlistmedical');
 Route::post('/admin/update-medical-status', [AdminDashboardController::class, 'updateMedicalStatus'])
@@ -211,6 +217,8 @@ Route::get('/admin/users/search/results', [SearchController::class, 'search'])->
 
 Route::get('/admin/user-rooms', [AdminDashboardController::class, 'usersByRoom'])->name('admin.users.by-room');
 Route::get('/admin/user-rooms/{roomNumber}', [AdminDashboardController::class, 'usersByRoomShow'])->name('admin.users.by-room.show');
+Route::get('/admin/audit/duplicate-users', [AdminDashboardController::class, 'duplicateUsersList'])->name('admin.audit.duplicate-users');
+Route::get('/admin/audit/recent-users', [AdminDashboardController::class, 'recentUsersList'])->name('admin.audit.recent-users');
 
 // Routes for users by category
 Route::get('admin/users/{category}/{value?}', [UserController::class, 'listByCategory'])->name('admin.users.list');
@@ -249,6 +257,11 @@ Route::prefix('admin/homepage')->name('admin.homepage.')->group(function () {
     Route::resource('destinations', AdminStudyDestinationController::class)->except(['show']);
 });
 
+Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function () {
+    Route::get('/user-edit-permissions', [UserEditPermissionController::class, 'edit'])->name('user-edit-permissions.edit');
+    Route::put('/user-edit-permissions', [UserEditPermissionController::class, 'update'])->name('user-edit-permissions.update');
+});
+
 Route::middleware(['auth:admin'])->prefix('admin/settings')->name('admin.smtp.')->group(function () {
     Route::get('/smtp', [SmtpSettingController::class, 'edit'])->name('edit');
     Route::put('/smtp', [SmtpSettingController::class, 'update'])->name('update');
@@ -256,6 +269,8 @@ Route::middleware(['auth:admin'])->prefix('admin/settings')->name('admin.smtp.')
 
 //Students Upload
 Route::prefix('admin')->group(function () {
+    Route::post('students/{student}/approve', [StudentController::class, 'approve'])->name('students.approve');
+    Route::post('students/{student}/reject', [StudentController::class, 'reject'])->name('students.reject');
     Route::resource('students', StudentController::class);
 });
 

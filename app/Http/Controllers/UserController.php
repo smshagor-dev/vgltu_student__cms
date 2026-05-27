@@ -4,16 +4,44 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\User;
+use App\Models\WebsiteSetting;
+use App\Support\UserProfileEditSettings;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 
 class UserController extends Controller
 {
+    protected function adminUserCategoryQuery(string $category, $value = null)
+    {
+        $query = User::approved();
+
+        switch ($category) {
+            case 'total':
+                return $query;
+            case 'nationality':
+            case 'country':
+                return $query->where('country', $value);
+            case 'religion':
+                return $query->where('religion', $value);
+            case 'department':
+                return $query->where('department', $value);
+            case 'course':
+                return $query->where('course', $value);
+            default:
+                return User::query()->whereRaw('1 = 0');
+        }
+    }
+
     public function edit()
     {
-        $user = Auth::user(); // Get the currently authenticated user
+        $user = Auth::user()->load('emergencyContacts'); // Get the currently authenticated user
+        $editableFields = UserProfileEditSettings::normalizeEditableFields(
+            WebsiteSetting::query()->first()?->user_editable_fields
+        );
+        $fieldDefinitions = UserProfileEditSettings::fields();
 
-        return view('user.edit', compact('user')); // Return a view with the user data
+        return view('user.edit', compact('user', 'editableFields', 'fieldDefinitions')); // Return a view with the user data
     }
 
     
@@ -28,65 +56,111 @@ class UserController extends Controller
 
     public function update(Request $request)
     {
-        // Validate the request
-        $request->validate([
-        'email' => 'required|email|unique:users,email,' . Auth::id(), 
-        'password' => 'nullable|min:8', 
-        'mobile_number' => 'nullable',  
-        'course_type' => 'nullable',    
-        'department' => 'nullable',     
-        'course_year' => 'nullable',
-        'course_language' => 'nullable',
-        'room_number' => 'nullable',
-        ]);
+        $formAction = $request->input('form_action', 'profile');
+        $editableFields = UserProfileEditSettings::normalizeEditableFields(
+            WebsiteSetting::query()->first()?->user_editable_fields
+        );
+
+        if ($formAction === 'password') {
+            $request->validate([
+                'current_password' => 'required',
+                'password' => 'required|min:8|confirmed',
+            ]);
+        } else {
+            $rules = [];
+
+            if (in_array('email', $editableFields, true)) {
+                $rules['email'] = 'required|email|unique:users,email,' . Auth::id();
+            }
+
+            foreach (['mobile_number', 'course_type', 'department', 'course_year', 'course_language', 'room_number'] as $field) {
+                if (in_array($field, $editableFields, true)) {
+                    $rules[$field] = 'nullable';
+                }
+            }
+
+            $rules['emergency_contacts'] = 'nullable|array';
+            $rules['emergency_contacts.*.platform'] = 'nullable|string|max:100';
+            $rules['emergency_contacts.*.contact_value'] = 'nullable|string|max:255';
+
+            $request->validate($rules);
+        }
 
         // Get the currently authenticated user
         $user = Auth::user();
 
-        // Update only the fields that the user is allowed to edit
-        $user->email = $request->email;
+        if ($formAction === 'password') {
+            if (! Hash::check($request->current_password, $user->password)) {
+                return redirect()
+                    ->route('user.edit')
+                    ->withErrors(['current_password' => 'Old password is incorrect.'])
+                    ->withInput();
+            }
 
-        if ($request->password) {
-            $user->password = bcrypt($request->password); // Only update password if provided
+            $user->password = bcrypt($request->password);
+            $user->save();
+
+            return redirect()->route('user.edit')->with('success', 'Password updated successfully.');
         }
 
-        $user->mobile_number = $request->mobile_number;
-        $user->course_type = $request->course_type;
-        $user->department = $request->department;
-        $user->course_year = $request->course_year;
-        $user->course_language = $request->course_language;
-        $user->room_number = $request->room_number;
+        // Update only the fields that the user is allowed to edit
+        foreach ($editableFields as $field) {
+            $user->{$field} = $request->input($field);
+        }
 
         // Save the updated user information
         $user->save();
 
-        return redirect()->route('home')->with('success', 'Your Data Successfully Updated!');
+        $emergencyContacts = collect($request->input('emergency_contacts', []))
+            ->map(function ($contact) {
+                return [
+                    'platform' => trim((string) ($contact['platform'] ?? '')),
+                    'contact_value' => trim((string) ($contact['contact_value'] ?? '')),
+                ];
+            })
+            ->filter(fn ($contact) => $contact['platform'] !== '' || $contact['contact_value'] !== '')
+            ->filter(fn ($contact) => $contact['platform'] !== '' && $contact['contact_value'] !== '')
+            ->values();
+
+        $user->emergencyContacts()->delete();
+
+        if ($emergencyContacts->isNotEmpty()) {
+            $user->emergencyContacts()->createMany($emergencyContacts->all());
+        }
+
+        return redirect()->route('user.edit')->with('success', 'Profile updated successfully.');
     }
     
     
     public function listByCategory($category, $value = null)
     {
-        switch ($category) {
-            case 'total':
-                $users = User::query()->orderBy('room_number')->paginate(20);
-                break;
-            case 'nationality':
-                $users = User::where('country', $value)->orderBy('room_number')->paginate(20);
-                break;
-            case 'religion':
-                $users = User::where('religion', $value)->orderBy('room_number')->paginate(20);
-                break;
-            case 'department':
-                $users = User::where('department', $value)->orderBy('room_number')->paginate(20);
-                break;
-            case 'course':
-                $users = User::where('course', $value)->orderBy('room_number')->paginate(20);
-                break;
-            default:
-                $users = User::query()->whereRaw('1 = 0')->paginate(20);
+        $search = trim((string) request('search'));
+        $query = $this->adminUserCategoryQuery($category, $value);
+
+        if ($search !== '') {
+            $query->where(function ($builder) use ($search) {
+                $like = '%' . $search . '%';
+
+                $builder->where('full_name', 'like', $like)
+                    ->orWhere('room_number', 'like', $like)
+                    ->orWhere('mobile_number', 'like', $like)
+                    ->orWhere('email', 'like', $like)
+                    ->orWhere('country', 'like', $like)
+                    ->orWhere('department', 'like', $like);
+            });
         }
 
-        return view('admin.user_details', compact('users'));
+        $users = $query->orderBy('room_number')->paginate(20)->withQueryString();
+
+        if (request()->ajax()) {
+            return response()->json([
+                'cards' => view('admin.partials.user_details_cards', compact('users'))->render(),
+                'pagination' => $users->links()->render(),
+                'count' => $users->total(),
+            ]);
+        }
+
+        return view('admin.user_details', compact('users', 'category', 'value', 'search'));
     }
     
     // User Delete
@@ -101,6 +175,6 @@ class UserController extends Controller
 
         $user->delete();
 
-        return redirect()->route('admin.dashboard')->with('success', 'User deleted successfully');
+        return redirect()->back()->with('success', 'User deleted successfully');
     }
 }

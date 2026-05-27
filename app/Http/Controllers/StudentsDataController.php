@@ -69,8 +69,10 @@ class StudentsDataController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
+            'passport_number' => 'required|string|max:50',
+            'passport_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:20048',
             'visa_start_date' => 'required|date',
-            'visa_expiry_date' => 'required|date',
+            'visa_expiry_date' => 'required|date|after_or_equal:visa_start_date',
             'visa_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:20048',
         ]);
 
@@ -81,16 +83,31 @@ class StudentsDataController extends Controller
             return redirect()->route('students_data.index')->with('error', 'Unauthorized access!');
         }
 
+        $originalVisaExpiryDate = optional($studentData->visa_expiry_date)?->toDateString();
+        $newVisaExpiryDate = $request->visa_expiry_date;
+
+        $studentData->passport_number = $request->passport_number;
         $studentData->visa_start_date = $request->visa_start_date;
         $studentData->visa_expiry_date = $request->visa_expiry_date;
 
+        if ($originalVisaExpiryDate !== $newVisaExpiryDate) {
+            $studentData->visa_reminder_90_sent_at = null;
+            $studentData->visa_reminder_75_sent_at = null;
+            $studentData->visa_reminder_60_sent_at = null;
+            $studentData->visa_overdue_10_sent_at = null;
+        }
+
+        if ($request->hasFile('passport_photo')) {
+            $studentData->passport_photo = ImageCompressor::storeUploadedFile($request->file('passport_photo'), 'uploads/passport_photos');
+        }
+
         if ($request->hasFile('visa_photo')) {
-            $studentData->visa_photo = ImageCompressor::storeUploadedFile($request->file('visa_photo'), 'visa_photos');
+            $studentData->visa_photo = ImageCompressor::storeUploadedFile($request->file('visa_photo'), 'uploads/visa_photos');
         }
 
         $studentData->save();
 
-        return redirect()->route('students_data.index')->with('success', 'Visa details updated successfully.');
+        return redirect()->route('students_data.index')->with('success', 'Student document details updated successfully.');
     }
 
 

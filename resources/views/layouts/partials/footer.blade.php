@@ -165,6 +165,79 @@
         box-shadow: 0 18px 34px rgba(187, 62, 113, 0.3);
     }
 
+    .edu-footer__cta-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .edu-footer__outline-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 50px;
+        padding: 0.88rem 1.6rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(35, 23, 38, 0.1);
+        color: #241726;
+        text-decoration: none;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        box-shadow: 0 14px 28px rgba(76, 42, 65, 0.08);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+    }
+
+    .edu-footer__outline-btn:hover {
+        transform: translateY(-2px);
+        color: #bb3e71;
+        box-shadow: 0 18px 34px rgba(76, 42, 65, 0.12);
+    }
+
+    .alumni-modal .modal-content {
+        border: 0;
+        border-radius: 24px;
+        overflow: hidden;
+        box-shadow: 0 26px 60px rgba(15, 23, 42, 0.18);
+    }
+
+    .alumni-modal .modal-header {
+        padding: 22px 24px 18px;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+        background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 58%, #0f766e 100%);
+        color: #fff;
+    }
+
+    .alumni-modal .modal-title {
+        color: #fff;
+        font-weight: 800;
+    }
+
+    .alumni-modal .btn-close {
+        filter: invert(1);
+    }
+
+    .alumni-modal .modal-body {
+        padding: 24px;
+        background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+    }
+
+    .alumni-form-grid {
+        display: grid;
+        gap: 16px;
+    }
+
+    .alumni-repeat-list {
+        display: grid;
+        gap: 12px;
+    }
+
+    .alumni-repeat-row {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
     .edu-footer__nav {
         display: flex;
         flex-direction: column;
@@ -290,6 +363,10 @@
             padding: 1.6rem 1rem 1rem;
         }
 
+        .edu-footer__cta-actions {
+            flex-direction: column;
+        }
+
         .edu-footer__cta,
         .edu-footer__nav {
             padding: 1rem;
@@ -303,6 +380,10 @@
         .edu-footer__social {
             width: 100%;
             justify-content: flex-start;
+        }
+
+        .alumni-repeat-row {
+            grid-template-columns: 1fr;
         }
     }
 </style>
@@ -318,7 +399,10 @@
                         <i class="fas fa-map-marker-alt"></i>
                         <span>{{ $settings['topbar_location'] ?? 'Voronezh, Russian Federation' }}</span>
                     </div>
-                    <a class="edu-footer__signup-btn" href="{{ route('register') }}">Signup</a>
+                    <div class="edu-footer__cta-actions">
+                        <a class="edu-footer__signup-btn" href="{{ route('register') }}">Registration Now</a>
+                        <button type="button" class="edu-footer__outline-btn" data-bs-toggle="modal" data-bs-target="#alumniNetworkModal">Add Profile to Alumni Network</button>
+                    </div>
                 </div>
                 <div class="edu-footer__nav">
                     <div class="edu-footer__label">Quick Links</div>
@@ -356,3 +440,80 @@
         </div>
     </div>
 </footer>
+
+<div class="modal fade alumni-modal" id="alumniNetworkModal" tabindex="-1" aria-labelledby="alumniNetworkModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <div class="small text-uppercase fw-bold" style="letter-spacing:.12em; opacity:.82;">Alumni Network</div>
+                    <h5 class="modal-title" id="alumniNetworkModalLabel">Add Profile to Alumni Network</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ route('alumni-network.submit') }}" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    <div class="alumni-form-grid">
+                        <div>
+                            <label class="form-label fw-semibold">Name</label>
+                            <input type="text" name="name" class="form-control" required>
+                        </div>
+
+                        <div>
+                            <label class="form-label fw-semibold">Degree</label>
+                            <div id="alumniDegreeList" class="alumni-repeat-list">
+                                <div class="alumni-repeat-row">
+                                    <input type="text" name="degree[]" class="form-control" required>
+                                    <button type="button" class="btn btn-outline-primary" onclick="addAlumniField('alumniDegreeList', 'degree[]')">Add</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="form-label fw-semibold">Department</label>
+                            <div id="alumniDepartmentList" class="alumni-repeat-list">
+                                <div class="alumni-repeat-row">
+                                    <input type="text" name="department[]" class="form-control" required>
+                                    <button type="button" class="btn btn-outline-primary" onclick="addAlumniField('alumniDepartmentList', 'department[]')">Add</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="form-label fw-semibold">Pass Year</label>
+                            <div id="alumniPassYearList" class="alumni-repeat-list">
+                                <div class="alumni-repeat-row">
+                                    <input type="text" name="pass_year[]" class="form-control" required>
+                                    <button type="button" class="btn btn-outline-primary" onclick="addAlumniField('alumniPassYearList', 'pass_year[]')">Add</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="form-label fw-semibold">Upload Photo</label>
+                            <input type="file" name="photo" class="form-control" accept=".jpg,.jpeg,.png" required>
+                        </div>
+
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" class="edu-footer__signup-btn border-0">Submit Alumni Request</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function addAlumniField(containerId, fieldName) {
+        const container = document.getElementById(containerId);
+        const row = document.createElement('div');
+        row.className = 'alumni-repeat-row';
+        row.innerHTML = `
+            <input type="text" name="${fieldName}" class="form-control" required>
+            <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">Remove</button>
+        `;
+        container.appendChild(row);
+    }
+</script>

@@ -16,7 +16,7 @@
 
             <div id="degreeFields">
                 <label style="font-weight: bold; color: #333;">Degree:</label>
-                @foreach(json_decode($student->degree) as $degree)
+                @foreach(($student->degree ?? []) as $degree)
                     <div class="degree-group" style="margin-bottom: 10px; display: flex; gap: 10px;">
                         <input type="text" name="degree[]" value="{{ $degree }}" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px;" required>
                         <button type="button" onclick="removeField(this)" style="padding: 10px; background-color: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer;">-</button>
@@ -27,7 +27,7 @@
 
             <div id="departmentFields">
                 <label style="font-weight: bold; color: #333;">Department:</label>
-                @foreach(json_decode($student->department) as $department)
+                @foreach(($student->department ?? []) as $department)
                     <div class="department-group" style="margin-bottom: 10px; display: flex; gap: 10px;">
                         <input type="text" name="department[]" value="{{ $department }}" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px;" required>
                         <button type="button" onclick="removeField(this)" style="padding: 10px; background-color: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer;">-</button>
@@ -38,7 +38,7 @@
 
             <div id="passYearFields">
                 <label style="font-weight: bold; color: #333;">Pass Year:</label>
-                @foreach(json_decode($student->pass_year) as $pass_year)
+                @foreach(($student->pass_year ?? []) as $pass_year)
                     <div class="pass-year-group" style="margin-bottom: 10px; display: flex; gap: 10px;">
                         <input type="text" name="pass_year[]" value="{{ $pass_year }}" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px;" required>
                         <button type="button" onclick="removeField(this)" style="padding: 10px; background-color: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer;">-</button>

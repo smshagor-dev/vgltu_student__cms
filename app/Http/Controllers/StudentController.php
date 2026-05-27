@@ -12,7 +12,7 @@ class StudentController extends Controller
     public function index()
     {
         $students = Student::query()
-            ->latest()
+            ->latest('created_at')
             ->paginate(20);
         return view('admin.students.index', compact('students'));
     }
@@ -27,21 +27,24 @@ class StudentController extends Controller
         $request->validate([
             'name' => 'required',
             'degree' => 'required|array',
+            'degree.*' => 'required|string|max:255',
             'department' => 'required|array',
+            'department.*' => 'required|string|max:255',
             'pass_year' => 'required|array',
+            'pass_year.*' => 'required|string|max:255',
             'photo' => 'required|image|mimes:jpeg,png,jpg|max:20048',
         ]);
     
-        if ($request->hasFile('photo')) {
-            $photoPath = ImageCompressor::storeUploadedFile($request->file('photo'), 'students');
-        }
+        $photoPath = ImageCompressor::storeUploadedFile($request->file('photo'), 'students');
     
         Student::create([
             'name' => $request->name,
             'photo_path' => $photoPath,
-            'degree' => json_encode($request->degree),
-            'department' => json_encode($request->department),
-            'pass_year' => json_encode($request->pass_year),
+            'degree' => array_values(array_filter($request->degree)),
+            'department' => array_values(array_filter($request->department)),
+            'pass_year' => array_values(array_filter($request->pass_year)),
+            'status' => 'approved',
+            'source' => 'admin',
         ]);
     
         return redirect()->route('students.index')->with('success', 'Student added successfully.');
@@ -57,8 +60,11 @@ class StudentController extends Controller
         $request->validate([
             'name' => 'required',
             'degree' => 'required|array',
+            'degree.*' => 'required|string|max:255',
             'department' => 'required|array',
+            'department.*' => 'required|string|max:255',
             'pass_year' => 'required|array',
+            'pass_year.*' => 'required|string|max:255',
             'photo' => 'nullable|image|mimes:jpeg,png,jpg|max:20048',
         ]);
     
@@ -72,12 +78,58 @@ class StudentController extends Controller
     
         $student->update([
             'name' => $request->name,
-            'degree' => json_encode($request->degree),
-            'department' => json_encode($request->department),
-            'pass_year' => json_encode($request->pass_year),
+            'degree' => array_values(array_filter($request->degree)),
+            'department' => array_values(array_filter($request->department)),
+            'pass_year' => array_values(array_filter($request->pass_year)),
         ]);
     
         return redirect()->route('students.index')->with('success', 'Student updated successfully.');
+    }
+
+    public function submitAlumni(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'degree' => 'required|array|min:1',
+            'degree.*' => 'required|string|max:255',
+            'department' => 'required|array|min:1',
+            'department.*' => 'required|string|max:255',
+            'pass_year' => 'required|array|min:1',
+            'pass_year.*' => 'required|string|max:255',
+            'photo' => 'required|image|mimes:jpeg,png,jpg|max:20048',
+        ]);
+
+        $photoPath = ImageCompressor::storeUploadedFile($request->file('photo'), 'students');
+
+        Student::create([
+            'name' => $request->name,
+            'photo_path' => $photoPath,
+            'degree' => array_values(array_filter($request->degree)),
+            'department' => array_values(array_filter($request->department)),
+            'pass_year' => array_values(array_filter($request->pass_year)),
+            'status' => 'pending',
+            'source' => 'alumni_network',
+        ]);
+
+        return redirect()->back()->with('success', 'Your alumni network request has been submitted successfully and is pending admin approval.');
+    }
+
+    public function approve(Student $student)
+    {
+        $student->update(['status' => 'approved']);
+
+        return redirect()->back()->with('success', 'Alumni request approved successfully.');
+    }
+
+    public function reject(Student $student)
+    {
+        if ($student->photo_path) {
+            Storage::disk('public')->delete($student->photo_path);
+        }
+
+        $student->delete();
+
+        return redirect()->back()->with('success', 'Alumni request rejected and removed successfully.');
     }
 
 

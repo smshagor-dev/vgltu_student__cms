@@ -103,113 +103,101 @@
         <div class="admin-toolbar">
             <div class="admin-toolbar__title">
                 <h3>Students Details</h3>
-                <p>Search the current page by student name or room number.</p>
+                <p>Search directly from the database by student name, room, phone, email, country, or department.</p>
             </div>
             <div class="admin-chip">
                 <i class="fas fa-users"></i>
-                <span>{{ method_exists($users, 'total') ? $users->total() : $users->count() }} Students</span>
+                <span id="studentCount">{{ method_exists($users, 'total') ? $users->total() : $users->count() }} Students</span>
             </div>
         </div>
 
         <div class="student-search mb-4">
-            <input type="text" id="searchInput" class="form-control" placeholder="Search by name or room number">
+            <input type="text" id="searchInput" class="form-control" value="{{ $search ?? '' }}" placeholder="Search from database by name, room, phone, email, country, department">
         </div>
 
         @if ($users->isEmpty())
             <div class="admin-empty">No students found for this filter.</div>
         @else
-            <div class="student-card-grid">
-                @foreach ($users as $user)
-                    <article class="student-card" data-name="{{ strtolower($user->full_name) }}" data-room="{{ strtolower($user->room_number) }}">
-                        <div class="student-card__photo">
-                            @if($user->photo)
-                                <a href="#" data-bs-toggle="modal" data-bs-target="#photoModal{{ $user->id }}">
-                                    <img src="{{ asset('storage/' . $user->photo) }}" alt="{{ $user->full_name }}">
-                                </a>
-                            @else
-                                <img src="{{ asset('storage/default.png') }}" alt="Default Photo">
-                            @endif
-                        </div>
-
-                        <div class="student-card__meta">
-                            <div class="student-card__top">
-                                <div>
-                                    <h4>{{ $user->full_name }}</h4>
-                                    <p>Room {{ $user->room_number ?: 'N/A' }}</p>
-                                </div>
-                                <span class="admin-chip">
-                                    <i class="fas fa-phone"></i>
-                                    <span>{{ $user->mobile_number ?: 'No number' }}</span>
-                                </span>
-                            </div>
-
-                            <div class="student-card__facts">
-                                <div class="admin-kv-item">
-                                    <span>Email</span>
-                                    <strong>{{ $user->email ?: 'N/A' }}</strong>
-                                </div>
-                                <div class="admin-kv-item">
-                                    <span>Country</span>
-                                    <strong>{{ $user->country ?: 'N/A' }}</strong>
-                                </div>
-                                <div class="admin-kv-item">
-                                    <span>Department</span>
-                                    <strong>{{ $user->department ?: 'N/A' }}</strong>
-                                </div>
-                            </div>
-
-                            <div class="student-card__actions">
-                                <a href="{{ route('admin.users.view', $user->id) }}" class="btn btn-primary">View</a>
-                                <a href="{{ route('admin.users.edit', $user->id) }}" class="btn btn-outline-primary">Edit</a>
-                                <form action="{{ route('admin.users.delete', $user->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this user?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-danger">Delete User</button>
-                                </form>
-                                <form action="{{ route('admin.forgetPassword', $user->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to reset this user\'s password?');">
-                                    @csrf
-                                    <button type="submit" class="btn btn-warning">Reset Password</button>
-                                </form>
-                            </div>
-                        </div>
-                    </article>
-
-                    <div class="modal fade" id="photoModal{{ $user->id }}" tabindex="-1" aria-labelledby="photoModalLabel{{ $user->id }}" aria-hidden="true">
-                        <div class="modal-dialog modal-dialog-centered">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="photoModalLabel{{ $user->id }}">{{ $user->full_name }}</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body text-center">
-                                    <img src="{{ $user->photo ? asset('storage/' . $user->photo) : asset('storage/default.png') }}" class="img-fluid rounded-4" alt="Full Photo">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                @endforeach
+            <div class="student-card-grid" id="studentCardGrid">
+                @include('admin.partials.user_details_cards')
             </div>
         @endif
     </section>
 
-    <div class="admin-pagination">
+    <div class="admin-pagination" id="studentPagination">
         {{ $users->links() }}
     </div>
 </div>
 
 <script>
-function filterUsers() {
-    let input = document.getElementById('searchInput').value.toLowerCase();
-    let userCards = document.getElementsByClassName('student-card');
+const userSearchInput = document.getElementById('searchInput');
+const studentCardGrid = document.getElementById('studentCardGrid');
+const studentPagination = document.getElementById('studentPagination');
+const studentCount = document.getElementById('studentCount');
+let userSearchTimeout = null;
 
-    for (let i = 0; i < userCards.length; i++) {
-        let name = userCards[i].getAttribute('data-name');
-        let room = userCards[i].getAttribute('data-room');
-
-        userCards[i].style.display = (name.includes(input) || room.includes(input)) ? 'grid' : 'none';
+function loadDirectory(page = 1) {
+    if (!studentCardGrid || !studentPagination || !studentCount) {
+        return;
     }
+
+    const search = userSearchInput.value.trim();
+    const url = new URL('{{ route('admin.users.list', ['category' => $category ?? 'total', 'value' => $value ?? null]) }}', window.location.origin);
+    url.searchParams.set('page', page);
+
+    if (search) {
+        url.searchParams.set('search', search);
+    }
+
+    fetch(url, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            studentCardGrid.innerHTML = data.cards;
+            studentPagination.innerHTML = data.pagination;
+            studentCount.textContent = `${data.count} Students`;
+
+            const browserUrl = new URL('{{ route('admin.users.list', ['category' => $category ?? 'total', 'value' => $value ?? null]) }}', window.location.origin);
+
+            if (search) {
+                browserUrl.searchParams.set('search', search);
+            }
+
+            if (page > 1) {
+                browserUrl.searchParams.set('page', page);
+            }
+
+            window.history.replaceState({}, '', browserUrl);
+        })
+        .catch(() => {
+            studentCardGrid.innerHTML = '<div class="admin-empty">Unable to load students right now.</div>';
+        });
 }
 
-document.getElementById('searchInput').addEventListener('input', filterUsers);
+if (userSearchInput) {
+    userSearchInput.addEventListener('input', function () {
+        clearTimeout(userSearchTimeout);
+        userSearchTimeout = setTimeout(() => loadDirectory(1), 350);
+    });
+}
+
+if (studentPagination) {
+    studentPagination.addEventListener('click', function (event) {
+        const link = event.target.closest('a');
+
+        if (!link) {
+            return;
+        }
+
+        event.preventDefault();
+        const url = new URL(link.href);
+        const page = url.searchParams.get('page') || 1;
+        loadDirectory(page);
+    });
+}
 </script>
 @endsection

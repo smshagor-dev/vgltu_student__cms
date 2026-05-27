@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-@php($user = Auth::user())
+@php($user = $user ?? Auth::user())
 
 <style>
     .dashboard-page {
@@ -104,6 +104,26 @@
         font-weight: 700;
         line-height: 1.6;
         word-break: break-word;
+    }
+
+    .dashboard-sidebar-card__cta {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 6px;
+        padding: 11px 14px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #241726, #bb3e71);
+        color: #fff;
+        font-size: 0.88rem;
+        font-weight: 800;
+        text-decoration: none;
+        box-shadow: 0 14px 26px rgba(76, 42, 65, 0.16);
+    }
+
+    .dashboard-sidebar-card__cta:hover {
+        color: #fff;
     }
 
     .dashboard-panel__heading {
@@ -319,6 +339,25 @@
                     <small>Account Status</small>
                     <strong>{{ $user->approved ? 'Approved' : 'Pending Review' }}</strong>
                 </div>
+                @if($user->emergencyContacts->isNotEmpty())
+                    <div class="dashboard-sidebar-card__item">
+                        <small>Emergency Contact</small>
+                        <strong>
+                            @foreach($user->emergencyContacts as $contact)
+                                <div>{{ $contact->platform }} - {{ $contact->contact_value }}</div>
+                            @endforeach
+                        </strong>
+                    </div>
+                @else
+                    <div class="dashboard-sidebar-card__item">
+                        <small>Emergency Contact</small>
+                        <strong>No emergency contact added yet.</strong>
+                        <a href="{{ route('user.edit') }}" class="dashboard-sidebar-card__cta">
+                            <i class="fas fa-phone-volume"></i>
+                            <span>Add Emergency Contact</span>
+                        </a>
+                    </div>
+                @endif
             </div>
         </aside>
 

@@ -24,17 +24,14 @@ class WelcomeController extends Controller
         $sliders = Slider::query()->latest()->get();
 
         $users = $this->mixOldAndNew(
-            User::query()
-            ->where(function ($query) {
-                $query->where('approved', true)->orWhereNull('approved');
-            })
-            ->orderBy('created_at')
-            ->orderBy('id')
-            ->get()
+            User::approved()
+                ->orderBy('created_at')
+                ->orderBy('id')
+                ->get()
         );
 
         $students = $this->mixOldAndNew(
-            Student::query()
+            Student::approved()
                 ->orderBy('created_at')
                 ->orderBy('id')
                 ->get()
@@ -128,10 +125,7 @@ class WelcomeController extends Controller
     public function allStudents(Request $request)
     {
         $users = $this->paginateMixedCollection(
-            User::query()
-                ->where(function ($query) {
-                    $query->where('approved', true)->orWhereNull('approved');
-                })
+            User::approved()
                 ->orderBy('created_at')
                 ->orderBy('id')
                 ->get(),
@@ -145,7 +139,7 @@ class WelcomeController extends Controller
     public function allPassedStudents(Request $request)
     {
         $students = $this->paginateMixedCollection(
-            Student::query()
+            Student::approved()
                 ->orderBy('created_at')
                 ->orderBy('id')
                 ->get(),

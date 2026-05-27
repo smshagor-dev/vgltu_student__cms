@@ -41,9 +41,18 @@ class AdminStudentController extends Controller
         ]);
 
         $student = StudentsData::findOrFail($id);
+        $originalVisaExpiryDate = optional($student->visa_expiry_date)?->toDateString();
+        $newVisaExpiryDate = $request->visa_expiry_date;
         $student->passport_number = $request->passport_number;
         $student->visa_start_date = $request->visa_start_date;
         $student->visa_expiry_date = $request->visa_expiry_date;
+
+        if ($originalVisaExpiryDate !== $newVisaExpiryDate) {
+            $student->visa_reminder_90_sent_at = null;
+            $student->visa_reminder_75_sent_at = null;
+            $student->visa_reminder_60_sent_at = null;
+            $student->visa_overdue_10_sent_at = null;
+        }
 
         // Handle photo uploads
         if ($request->hasFile('passport_photo')) {
