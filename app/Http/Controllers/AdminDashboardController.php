@@ -54,7 +54,7 @@ class AdminDashboardController extends Controller
     protected function duplicateUsersCollection()
     {
         $usersForDuplicateCheck = User::with('studentsData')
-            ->select('id', 'full_name', 'email', 'room_number', 'approved', 'created_at')
+            ->select('id', 'full_name', 'email', 'photo', 'room_number', 'approved', 'created_at')
             ->get();
 
         $duplicateNameKeys = $usersForDuplicateCheck
@@ -277,6 +277,8 @@ class AdminDashboardController extends Controller
         $totalBangladeshiStudents = (clone $approvedUsers)->where('country', 'Bangladesh')->count();
         $totalIndianStudents = (clone $approvedUsers)->where('country', 'India')->count();
         $totalNepaliStudents = (clone $approvedUsers)->where('country', 'Nepal')->count();
+        $maleStudents = (clone $approvedUsers)->where('gender', 'Male')->count();
+        $femaleStudents = (clone $approvedUsers)->where('gender', 'Female')->count();
 
         // Students by religion
         $muslimStudents = (clone $approvedUsers)->where('religion', 'Muslim')->count();
@@ -336,7 +338,7 @@ class AdminDashboardController extends Controller
 
         // Return the view with the data
         return view('admin.dashboard', compact(
-            'totalStudents', 'totalBangladeshiStudents', 'totalIndianStudents', 'totalNepaliStudents',
+            'totalStudents', 'totalBangladeshiStudents', 'totalIndianStudents', 'totalNepaliStudents', 'maleStudents', 'femaleStudents',
             'muslimStudents', 'hinduStudents', 'boddhoStudents', 'cristanStudents',
             'language', 'automobileStudents', 'forestryStudents', 'mechanicalStudents', 'cstStudents', 'economicsStudents',
             'languageStudents', 'bscStudents', 'mscStudents', 'phdStudents','otherDepartments', 'englishStudents', 'russianStudents','totalStudentsList','notCompleteCount','totalpendingstudent',
@@ -369,6 +371,7 @@ class AdminDashboardController extends Controller
             'emptyMessage' => 'No new users registered in the last 7 days.',
             'users' => $users,
             'mode' => 'recent-users',
+            'showDuplicateReasons' => false,
         ]);
     }
     

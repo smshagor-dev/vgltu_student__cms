@@ -172,7 +172,10 @@
                             @foreach ($group->users as $user)
                                 <article class="audit-member">
                                     <div class="audit-member__photo">
-                                        <img src="{{ $user->photo ? asset('storage/' . $user->photo) : asset('storage/default.png') }}" alt="{{ $user->full_name }}">
+                                        <img
+                                            src="{{ $user->photo ? asset('storage/' . $user->photo) : asset('default-avatar.png') }}"
+                                            alt="{{ $user->full_name }}"
+                                        >
                                     </div>
 
                                     <div class="audit-member__body">
@@ -222,49 +225,60 @@
             <div class="audit-grid">
                 @foreach ($users as $user)
                     <article class="audit-card">
-                        <div class="audit-card__top">
-                            <div>
-                                <h4>{{ $user->full_name }}</h4>
-                                <p>{{ $user->email ?: 'No email' }}</p>
+                        <article class="audit-member">
+                            <div class="audit-member__photo">
+                                <img
+                                    src="{{ $user->photo ? asset('storage/' . $user->photo) : asset('default-avatar.png') }}"
+                                    alt="{{ $user->full_name }}"
+                                >
                             </div>
-                            <span class="audit-status {{ $user->approved ? 'is-approved' : 'is-pending' }}">
-                                <i class="fas {{ $user->approved ? 'fa-circle-check' : 'fa-clock' }}"></i>
-                                {{ $user->approved ? 'Approved' : 'Pending' }}
-                            </span>
-                        </div>
 
-                        @if ($showDuplicateReasons && !empty($user->duplicate_match_reasons))
-                            <div class="audit-badges">
-                                @foreach ($user->duplicate_match_reasons as $reason)
-                                    <span class="audit-badge"><i class="fas fa-link"></i> Match by {{ $reason }}</span>
-                                @endforeach
-                            </div>
-                        @endif
+                            <div class="audit-member__body">
+                                <div class="audit-card__top">
+                                    <div>
+                                        <h4>{{ $user->full_name }}</h4>
+                                        <p>{{ $user->email ?: 'No email' }}</p>
+                                    </div>
+                                    <span class="audit-status {{ $user->approved ? 'is-approved' : 'is-pending' }}">
+                                        <i class="fas {{ $user->approved ? 'fa-circle-check' : 'fa-clock' }}"></i>
+                                        {{ $user->approved ? 'Approved' : 'Pending' }}
+                                    </span>
+                                </div>
 
-                        <div class="audit-meta">
-                            <div class="admin-kv-item">
-                                <span>Passport Number</span>
-                                <strong>{{ $user->studentsData->passport_number ?? 'No passport data' }}</strong>
-                            </div>
-                            <div class="admin-kv-item">
-                                <span>Room</span>
-                                <strong>{{ $user->room_number ?: 'N/A' }}</strong>
-                            </div>
-                            <div class="admin-kv-item">
-                                <span>Registered</span>
-                                <strong>{{ $user->created_at?->format('d M Y, h:i A') ?: 'N/A' }}</strong>
-                            </div>
-                        </div>
+                                @if ($showDuplicateReasons && !empty($user->duplicate_match_reasons))
+                                    <div class="audit-badges">
+                                        @foreach ($user->duplicate_match_reasons as $reason)
+                                            <span class="audit-badge"><i class="fas fa-link"></i> Match by {{ $reason }}</span>
+                                        @endforeach
+                                    </div>
+                                @endif
 
-                        <div class="admin-actions-inline">
-                            <a href="{{ route('admin.users.view', $user->id) }}" class="btn btn-primary">Open User</a>
-                            <a href="{{ route('admin.users.edit', $user->id) }}" class="btn btn-outline-primary">Edit</a>
-                            <form action="{{ route('admin.users.delete', $user->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this user?');" style="display:inline;">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-danger">Delete User</button>
-                            </form>
-                        </div>
+                                <div class="audit-meta">
+                                    <div class="admin-kv-item">
+                                        <span>Passport Number</span>
+                                        <strong>{{ $user->studentsData->passport_number ?? 'No passport data' }}</strong>
+                                    </div>
+                                    <div class="admin-kv-item">
+                                        <span>Room</span>
+                                        <strong>{{ $user->room_number ?: 'N/A' }}</strong>
+                                    </div>
+                                    <div class="admin-kv-item">
+                                        <span>Registered</span>
+                                        <strong>{{ $user->created_at?->format('d M Y, h:i A') ?: 'N/A' }}</strong>
+                                    </div>
+                                </div>
+
+                                <div class="admin-actions-inline">
+                                    <a href="{{ route('admin.users.view', $user->id) }}" class="btn btn-primary">Open User</a>
+                                    <a href="{{ route('admin.users.edit', $user->id) }}" class="btn btn-outline-primary">Edit</a>
+                                    <form action="{{ route('admin.users.delete', $user->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this user?');" style="display:inline;">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-danger">Delete User</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </article>
                     </article>
                 @endforeach
             </div>

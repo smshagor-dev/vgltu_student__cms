@@ -2,80 +2,129 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\User;
+use Illuminate\Http\Request;
+use Mpdf\Mpdf;
 
 class StudentByReligionController extends Controller
 {
     public function index(Request $request)
     {
-        // Fetch distinct countries and religions from the database
-        $countries = User::distinct()->pluck('country');
-        $religions = User::distinct()->pluck('religion');
-
-        // Create the base query
-        $query = User::query();
-
-        // Apply filters if 'religion' or 'country' is present in the request
-        if ($request->has('religion') && $request->religion != '') {
-            $query->where('religion', $request->religion);
-        }
-
-        if ($request->has('country') && $request->country != '') {
-            $query->where('country', $request->country);
-        }
-
-        // Fetch filtered users
-        $users = $query->get();
-
-        // Structure the data by block
+        [$users, $religions, $countries, $selectedReligion, $selectedCountry] = $this->filteredDataset($request);
         $structuredData = $this->structureByBlock($users);
 
-        // Return the view with countries, religions, and structured data
-        return view('admin.students_by_religion', compact('structuredData', 'countries', 'religions'));
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => view('admin.partials.students_by_religion_cards', compact('structuredData', 'selectedReligion', 'selectedCountry'))->render(),
+                'pdf_url' => route('students.by.religion.pdf', ['religion' => $selectedReligion, 'country' => $selectedCountry]),
+            ]);
+        }
+
+        return view('admin.students_by_religion', compact('structuredData', 'countries', 'religions', 'selectedReligion', 'selectedCountry'));
     }
 
+    public function downloadPdf(Request $request)
+    {
+        [, , , $selectedReligion, $selectedCountry] = $this->filteredDataset($request);
+        [$users] = $this->filteredDataset($request);
+        $structuredData = $this->structureByBlock($users);
+        $reportEntries = $this->buildReportEntries($structuredData);
+
+        $html = view('admin.students_by_floor_pdf', compact(
+            'reportEntries',
+            'selectedReligion',
+            'selectedCountry'
+        ))->render();
+
+        $mpdf = new Mpdf([
+            'format' => 'A4',
+            'orientation' => 'L',
+            'margin_top' => 14,
+            'margin_right' => 10,
+            'margin_bottom' => 14,
+            'margin_left' => 10,
+        ]);
+
+        $mpdf->SetTitle('Students By Floor Report');
+        $mpdf->WriteHTML($html);
+        $mpdf->SetDisplayMode('fullpage');
+
+        $filename = 'students-by-floor-report.pdf';
+
+        return response($mpdf->Output($filename, 'S'), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
 
     public function showBlock(Request $request, $block)
     {
-        // Get the filters for religion and country from the request
-        $religion = $request->input('religion');
-        $country = $request->input('country');
-
-        // Start the query to fetch all users
-        $query = User::query();
-
-        // Apply the filters if they are present
-        if ($religion) {
-            $query->where('religion', $religion);
-        }
-
-        if ($country) {
-            $query->where('country', $country);
-        }
-
-        // Fetch the filtered users
-        $users = $query->get();
-
-        // Structure the data by block
+        [, $religions, $countries] = $this->filteredDataset($request);
+        [$users] = $this->filteredDataset($request);
         $structuredData = $this->structureByBlock($users);
 
-        // Check if the block exists
         if (!isset($structuredData[$block])) {
             abort(404, 'Block not found');
         }
 
-        // Get the floors for the selected block
         $floors = $structuredData[$block];
+        $religion = $request->input('religion');
+        $country = $request->input('country');
 
-        // Fetch unique religions and countries from the database for the dropdowns
-        $religions = User::distinct()->pluck('religion');
-        $countries = User::distinct()->pluck('country');
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => view('admin.partials.student_by_block_cards', compact('floors'))->render(),
+            ]);
+        }
 
-        // Return the view with block data, floors, filters, and dropdown data
         return view('admin.student_by_block', compact('block', 'floors', 'religion', 'country', 'religions', 'countries'));
     }
 
+    private function filteredDataset(Request $request): array
+    {
+        $countries = User::distinct()->pluck('country');
+        $religions = User::distinct()->pluck('religion');
+        $selectedReligion = $request->input('religion');
+        $selectedCountry = $request->input('country');
+
+        $query = User::query();
+
+        if ($selectedReligion) {
+            $query->where('religion', $selectedReligion);
+        }
+
+        if ($selectedCountry) {
+            $query->where('country', $selectedCountry);
+        }
+
+        $users = $query->get();
+
+        return [$users, $religions, $countries, $selectedReligion, $selectedCountry];
+    }
+
+    private function buildReportEntries(array $structuredData): array
+    {
+        $entries = [];
+
+        foreach ($structuredData as $block => $floors) {
+            foreach ($floors as $floor => $rooms) {
+                foreach ($rooms as $roomNumber => $students) {
+                    foreach ($students as $student) {
+                        $entries[] = [
+                            'block' => $block,
+                            'floor' => $floor,
+                            'room_number' => $roomNumber,
+                            'name' => $student->full_name,
+                            'country' => $student->country,
+                            'religion' => $student->religion,
+                        ];
+                    }
+                }
+            }
+        }
+
+        return $entries;
+    }
 
     private function structureByBlock($users)
     {

@@ -21,6 +21,7 @@ class WebsiteSettingController extends Controller
             'class_routine_link' => '/class_routine',
             'university_profile_text' => 'University Profile',
             'university_profile_link' => '/university_profile',
+            'footer_social_links' => [],
         ]);
 
         return view('admin.homepage.settings', compact('settings'));
@@ -39,6 +40,12 @@ class WebsiteSettingController extends Controller
             'class_routine_link' => 'required|string|max:255',
             'university_profile_text' => 'required|string|max:100',
             'university_profile_link' => 'required|string|max:255',
+            'footer_social_links' => 'nullable|array',
+            'footer_social_links.*.label' => 'nullable|string|max:100',
+            'footer_social_links.*.url' => 'nullable|string|max:255',
+            'footer_social_links.*.icon_path' => 'nullable|string|max:255',
+            'footer_social_links_icons' => 'nullable|array',
+            'footer_social_links_icons.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
         ]);
 
         $settings = WebsiteSetting::query()->first() ?? new WebsiteSetting();
@@ -51,10 +58,43 @@ class WebsiteSettingController extends Controller
             $data['favicon_path'] = ImageCompressor::storeUploadedFile($request->file('favicon'), 'homepage/settings');
         }
 
+        $data['footer_social_links'] = $this->prepareFooterSocialLinks($request);
+
         $settings->fill($data)->save();
 
         PublicSiteData::clearCache();
 
         return redirect()->route('admin.homepage.settings.edit')->with('success', 'Website settings updated successfully.');
+    }
+
+    private function prepareFooterSocialLinks(Request $request): array
+    {
+        $rows = $request->input('footer_social_links', []);
+        $links = [];
+
+        foreach ($rows as $index => $row) {
+            $label = trim((string) ($row['label'] ?? ''));
+            $url = trim((string) ($row['url'] ?? ''));
+            $iconPath = trim((string) ($row['icon_path'] ?? ''));
+
+            if ($request->hasFile("footer_social_links_icons.$index")) {
+                $iconPath = ImageCompressor::storeUploadedFile(
+                    $request->file("footer_social_links_icons.$index"),
+                    'homepage/footer-social'
+                );
+            }
+
+            if ($url === '' || $iconPath === '') {
+                continue;
+            }
+
+            $links[] = [
+                'label' => $label !== '' ? $label : 'Social Link ' . (count($links) + 1),
+                'url' => $url,
+                'icon_path' => $iconPath,
+            ];
+        }
+
+        return $links;
     }
 }

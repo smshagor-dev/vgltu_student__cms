@@ -8,10 +8,14 @@
     </button>
 
     @if($fields->isNotEmpty())
-        <form method="POST" action="{{ route('user-fields.existing-store') }}" enctype="multipart/form-data">
-            @csrf
             @foreach ($fields as $field)
-                <div class="mb-4">
+                @php
+                    $fieldOptions = $field->getRelation('options') ?? collect();
+                @endphp
+                <form method="POST" action="{{ route('user-fields.existing-store') }}" enctype="multipart/form-data" class="mb-4">
+                    @csrf
+                    <input type="hidden" name="submitted_field_id" value="{{ $field->id }}">
+                    <div class="mb-4">
                     <center>
                         <label for="field_{{ $field->id }}" class="form-label fw-bold">
                             <h3><b style="color: blue;">{{ e($field->field_label) }}</b></h3>
@@ -37,8 +41,8 @@
                             required
                         >
                    @elseif ($field->field_type === 'multiple_choice')
-                        @if ($field->options && $field->options->isNotEmpty())
-                            @foreach ($field->options as $option)
+                        @if ($fieldOptions->isNotEmpty())
+                            @foreach ($fieldOptions as $option)
                                 <div class="form-check mb-2">
                                     <input 
                                         type="checkbox" 
@@ -71,13 +75,13 @@
                             <p>No options available</p>
                         @endif
                     @endif
-                </div>
-            @endforeach
+                    </div>
 
-            <div class="text-center">
-                <button type="submit" class="btn btn-primary px-5">Submit</button>
-            </div>
-        </form>
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary px-5">Submit This Section</button>
+                    </div>
+                </form>
+            @endforeach
     @else
         <div class="alert alert-info text-center" role="alert">
             <p>

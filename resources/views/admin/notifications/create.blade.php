@@ -85,7 +85,7 @@
 <div class="notification-card">
     <div class="notification-card__heading">
         <h2>Send Notification</h2>
-        <p>Admin panel থেকে সব student অথবা নির্দিষ্ট student-কে portal notification পাঠাতে পারবেন.</p>
+        <p>Send a portal notification from the admin panel to all users or to one specific user.</p>
     </div>
 
     <div class="d-flex justify-content-end mb-3">
@@ -143,13 +143,13 @@
             <div class="notification-field">
                 <label for="url">Open URL</label>
                 <input type="text" name="url" id="url" class="form-control" value="{{ old('url', route('home')) }}" placeholder="{{ route('home') }}">
-                <div class="notification-help">User notification open করলে এই link-এ যাবে.</div>
+                <div class="notification-help">Users will be taken to this link when they open the notification.</div>
             </div>
 
             <div class="notification-field">
                 <label for="icon">Icon Class</label>
                 <input type="text" name="icon" id="icon" class="form-control" value="{{ old('icon', 'fas fa-bell') }}" placeholder="fas fa-bell">
-                <div class="notification-help">Font Awesome class ব্যবহার করতে পারেন.</div>
+                <div class="notification-help">You can use any valid Font Awesome icon class here.</div>
             </div>
         </div>
 

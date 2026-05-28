@@ -4,7 +4,8 @@ namespace App\Support;
 
 use App\Models\User;
 use App\Models\UserNotification;
-use App\Support\WebPushService;
+use App\Notifications\UserPushNotification;
+use Illuminate\Support\Facades\Notification;
 
 class UserNotificationPublisher
 {
@@ -26,7 +27,7 @@ class UserNotificationPublisher
             'updated_at' => now(),
         ];
 
-        User::query()->select('id')->chunkById(200, function ($users) use ($baseData) {
+        User::query()->select('id')->chunkById(200, function ($users) use ($baseData, $payload) {
             $rows = $users->map(function ($user) use ($baseData) {
                 return array_merge($baseData, [
                     'user_id' => $user->id,
@@ -34,7 +35,7 @@ class UserNotificationPublisher
             })->all();
 
             UserNotification::insert($rows);
-            WebPushService::sendToUsers($users->pluck('id')->all(), $payload);
+            Notification::send($users, self::makePushNotification($payload));
         });
     }
 
@@ -69,11 +70,29 @@ class UserNotificationPublisher
         }
 
         UserNotification::insert($rows);
-        WebPushService::sendToUsers(collect($rows)->pluck('user_id')->all(), $payload);
+
+        $users = User::query()
+            ->whereIn('id', collect($rows)->pluck('user_id')->all())
+            ->get();
+
+        if ($users->isNotEmpty()) {
+            Notification::send($users, self::makePushNotification($payload));
+        }
     }
 
     public static function sendToUser(int $userId, array $payload): void
     {
         self::sendToUsers([$userId], $payload);
+    }
+
+    private static function makePushNotification(array $payload): UserPushNotification
+    {
+        return new UserPushNotification(
+            trim((string) ($payload['title'] ?? 'Notification')),
+            (string) ($payload['description'] ?? 'Open the portal to view this notification.'),
+            (string) ($payload['type'] ?? 'general'),
+            $payload['url'] ?? route('home'),
+            $payload['icon'] ?? 'fas fa-bell',
+        );
     }
 }

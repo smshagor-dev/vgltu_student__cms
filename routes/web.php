@@ -46,6 +46,7 @@ use App\Http\Controllers\ContactMessageController;
 use App\Http\Controllers\CoursePageController;
 use App\Http\Controllers\UserNotificationController;
 use App\Http\Controllers\PushSubscriptionController;
+use App\Http\Controllers\ClassRoutineController;
 
 
 // Route::get('/', function () {
@@ -144,15 +145,19 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/notifications/{notification}/read', [UserNotificationController::class, 'markRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [UserNotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::post('/notifications/browser-preference', [UserNotificationController::class, 'browserPreference'])->name('notifications.browser-preference');
+    Route::post('/push-subscriptions', [PushSubscriptionController::class, 'store'])->name('push-subscriptions.store');
+    Route::delete('/push-subscriptions', [PushSubscriptionController::class, 'destroy'])->name('push-subscriptions.destroy');
     Route::post('/notifications/push-subscriptions', [PushSubscriptionController::class, 'subscribe'])->name('notifications.push-subscriptions.store');
     Route::delete('/notifications/push-subscriptions', [PushSubscriptionController::class, 'unsubscribe'])->name('notifications.push-subscriptions.destroy');
     Route::get('/notifications/feed', [UserNotificationController::class, 'feed'])->name('notifications.feed');
 });
 
 //IFrame for Loding university class Routine and University Profile
-Route::get('/class_routine', function () {
-    return view('class_routine');
-});
+Route::get('/class_routine', [ClassRoutineController::class, 'show'])->name('class-routine.show');
+Route::match(['GET', 'POST'], '/class_routine/proxy', [ClassRoutineController::class, 'proxy'])->name('class-routine.proxy-root');
+Route::match(['GET', 'POST'], '/class_routine/proxy/{path}', [ClassRoutineController::class, 'proxy'])
+    ->where('path', '.*')
+    ->name('class-routine.proxy');
 
 Route::get('/university_profile', function () {
     return view('university_profile');
@@ -413,6 +418,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:admin'])->group(functi
 });
 
 Route::get('admin/dashboard/students-by-floor', [StudentByReligionController::class, 'index'])->name('students.by.religion');
+Route::get('admin/dashboard/students-by-floor/pdf', [StudentByReligionController::class, 'downloadPdf'])->name('students.by.religion.pdf');
 Route::get('admin/dashboard/students-by-block/{block}', [StudentByReligionController::class, 'showBlock'])->name('students.by.block');
 
 });

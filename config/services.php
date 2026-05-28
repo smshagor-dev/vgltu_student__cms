@@ -36,9 +36,9 @@ return [
     ],
 
     'webpush' => [
-        'subject' => env('WEBPUSH_SUBJECT'),
-        'public_key' => env('WEBPUSH_PUBLIC_KEY'),
-        'private_key' => env('WEBPUSH_PRIVATE_KEY'),
+        'subject' => env('VAPID_SUBJECT', env('WEBPUSH_SUBJECT')),
+        'public_key' => env('VAPID_PUBLIC_KEY', env('WEBPUSH_PUBLIC_KEY')),
+        'private_key' => env('VAPID_PRIVATE_KEY', env('WEBPUSH_PRIVATE_KEY')),
     ],
 
 ];

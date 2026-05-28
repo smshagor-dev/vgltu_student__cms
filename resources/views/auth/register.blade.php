@@ -444,8 +444,11 @@
                     <div class="register-field">
                         <label for="course_type">Course Type</label>
                         <select class="form-control" id="course_type" name="course_type" required>
-                            <option value="">Select Couse Type</option>
+                            <option value="">Select Course Type</option>
                             <option value="Language" {{ old('course_type') == 'Language' ? 'selected' : '' }}>Language</option>
+                            <option value="BSC" {{ old('course_type') == 'BSC' ? 'selected' : '' }}>BSC - Bachelor of Science</option>
+                            <option value="MSC" {{ old('course_type') == 'MSC' ? 'selected' : '' }}>MSC - Master of Science</option>
+                            <option value="PHD" {{ old('course_type') == 'PHD' ? 'selected' : '' }}>PHD</option>
                         </select>
                         @error('course_type')
                             <span class="register-error">{{ $message }}</span>

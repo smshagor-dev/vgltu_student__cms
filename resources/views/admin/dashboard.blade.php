@@ -285,6 +285,20 @@
                 <span class="dashboard-stat__hint">View full student dataset</span>
             </a>
 
+            <a href="{{ route('admin.users.list', ['category' => 'gender', 'value' => 'Male']) }}" class="dashboard-stat tone-sky">
+                <span class="dashboard-stat__icon"><i class="fas fa-person"></i></span>
+                <span class="dashboard-stat__label">Male Students</span>
+                <span class="dashboard-stat__value">{{ $maleStudents }}</span>
+                <span class="dashboard-stat__hint">Open male student list</span>
+            </a>
+
+            <a href="{{ route('admin.users.list', ['category' => 'gender', 'value' => 'Female']) }}" class="dashboard-stat tone-emerald">
+                <span class="dashboard-stat__icon"><i class="fas fa-person-dress"></i></span>
+                <span class="dashboard-stat__label">Female Students</span>
+                <span class="dashboard-stat__value">{{ $femaleStudents }}</span>
+                <span class="dashboard-stat__hint">Open female student list</span>
+            </a>
+
             <a href="{{ route('admin.studentlist') }}" class="dashboard-stat tone-blue">
                 <span class="dashboard-stat__icon"><i class="fas fa-list-check"></i></span>
                 <span class="dashboard-stat__label">Students List</span>

@@ -93,7 +93,7 @@
     <div class="notification-history__header">
         <div>
             <h2>Notification List</h2>
-            <p>Admin থেকে আগে পাঠানো custom notification history এখানে দেখতে পারবেন.</p>
+            <p>Review the custom notification history previously sent from the admin panel.</p>
         </div>
         <a href="{{ route('admin.notifications.create') }}" class="notification-history__action">
             <i class="fas fa-paper-plane"></i>

@@ -5,7 +5,7 @@
     <h2 class="text-center mb-4">Students in Block: {{ $block }}</h2>
 
     <!-- Search Form -->
-    <form method="GET" action="{{ route('students.by.block', ['block' => $block]) }}" class="mb-4 row justify-content-center">
+    <form method="GET" action="{{ route('students.by.block', ['block' => $block]) }}" class="mb-4 row justify-content-center" id="studentsByBlockFilterForm">
         <!-- Religion Dropdown -->
         <div class="col-md-4 mb-3">
             <select name="religion" class="form-control">
@@ -38,58 +38,51 @@
     </form>
 
     <!-- Block Cards -->
-    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
-        @foreach($floors as $floor => $rooms)
-            <div class="col">
-                <div class="card h-100 text-center shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title text-primary">{{ $floor }}</h5>
-                        <ul class="list-unstyled">
-                            @foreach($rooms as $roomNumber => $students)
-                                <li>
-                                    Room Number: {{ $roomNumber }} ({{ count($students) }})
-                                    <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#roomModal{{ $roomNumber }}">
-                                        View
-                                    </button>
-
-                                    <!-- Modal -->
-                                    <div class="modal fade" id="roomModal{{ $roomNumber }}" tabindex="-1" aria-labelledby="roomModalLabel" aria-hidden="true">
-                                        <div class="modal-dialog">
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title" id="roomModalLabel">Students in Room {{ $roomNumber }}</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <button class="btn btn-sm btn-primary mb-2" onclick="copyRoomData('roomData{{ $roomNumber }}')">Copy</button>
-                                                    
-                                                    <ul id="roomData{{ $roomNumber }}" style="text-align: left;">
-                                                        @foreach($students as $student)
-                                                            <li>Room number: {{ $student->room_number }} - {{ $student->full_name }}</li>
-                                                        @endforeach
-                                                    </ul>
-                                                </div>
-
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </li>
-                            @endforeach
-                        </ul>
-                    </div>
-                    <div class="card-footer">
-                        <small class="text-muted">View Details</small>
-                    </div>
-                </div>
-            </div>
-        @endforeach
+    <div id="studentsByBlockCards">
+        @include('admin.partials.student_by_block_cards', ['floors' => $floors])
     </div>
 </div>
 
 <script>
+    (function () {
+        const form = document.getElementById('studentsByBlockFilterForm');
+        const cards = document.getElementById('studentsByBlockCards');
+
+        if (!form || !cards) {
+            return;
+        }
+
+        const submitFilter = function () {
+            const formData = new FormData(form);
+            const params = new URLSearchParams(formData);
+            const url = form.action + '?' + params.toString();
+
+            fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    cards.innerHTML = data.html;
+                    window.history.replaceState({}, '', url);
+                })
+                .catch(() => {
+                    window.location.href = url;
+                });
+        };
+
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            submitFilter();
+        });
+
+        form.querySelectorAll('select[name="religion"], select[name="country"]').forEach(function (select) {
+            select.addEventListener('change', submitFilter);
+        });
+    })();
+
     function copyRoomData(elementId) {
         const el = document.getElementById(elementId);
         if (!el) return;

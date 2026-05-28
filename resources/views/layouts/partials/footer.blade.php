@@ -11,10 +11,10 @@
         ['label' => 'View All Image', 'url' => route('photo-galleries.all')],
         ['label' => 'View All Videos', 'url' => route('video-galleries.all')],
     ];
-    $footerSocialLinks = [
-        ['label' => 'Facebook', 'icon' => 'fab fa-facebook-f', 'url' => $settings['facebook_url'] ?? route('welcome')],
-        ['label' => 'WhatsApp', 'icon' => 'fab fa-whatsapp', 'url' => $settings['whatsapp_url'] ?? 'https://wa.me/79954949836'],
-        ['label' => 'Instagram', 'icon' => 'fab fa-instagram', 'url' => $settings['instagram_url'] ?? route('welcome')],
+    $footerSocialLinks = $settings['footer_social_links'] ?? [
+        ['label' => 'Facebook', 'icon_class' => 'fab fa-facebook-f', 'url' => route('welcome'), 'icon_url' => null],
+        ['label' => 'WhatsApp', 'icon_class' => 'fab fa-whatsapp', 'url' => 'https://wa.me/79954949836', 'icon_url' => null],
+        ['label' => 'Instagram', 'icon_class' => 'fab fa-instagram', 'url' => route('welcome'), 'icon_url' => null],
     ];
 @endphp
 
@@ -351,6 +351,13 @@
         box-shadow: 0 14px 26px rgba(76, 42, 65, 0.12);
     }
 
+    .edu-footer__social img {
+        width: 20px;
+        height: 20px;
+        object-fit: contain;
+        display: block;
+    }
+
     @media (max-width: 991px) {
         .edu-footer__inner {
             grid-template-columns: 1fr;
@@ -400,7 +407,7 @@
                         <span>{{ $settings['topbar_location'] ?? 'Voronezh, Russian Federation' }}</span>
                     </div>
                     <div class="edu-footer__cta-actions">
-                        <a class="edu-footer__signup-btn" href="{{ route('register') }}">Registration Now</a>
+                        <a class="edu-footer__signup-btn" href="{{ route('register') }}">Join Now</a>
                         <button type="button" class="edu-footer__outline-btn" data-bs-toggle="modal" data-bs-target="#alumniNetworkModal">Add Profile to Alumni Network</button>
                     </div>
                 </div>
@@ -432,7 +439,11 @@
                 <div class="edu-footer__social" aria-label="Social media links">
                     @foreach ($footerSocialLinks as $item)
                         <a href="{{ $item['url'] }}" target="_blank" rel="noopener noreferrer" aria-label="{{ $item['label'] }}">
-                            <i class="{{ $item['icon'] }}"></i>
+                            @if (!empty($item['icon_url']))
+                                <img src="{{ $item['icon_url'] }}" alt="{{ $item['label'] }}">
+                            @else
+                                <i class="{{ $item['icon_class'] ?? 'fas fa-link' }}"></i>
+                            @endif
                         </a>
                     @endforeach
                 </div>

@@ -4,8 +4,11 @@
     $settings = $publicShell['settings'] ?? [];
     $menus = $publicShell['menus'] ?? [];
     $siteName = $settings['site_name'] ?? config('app.name', 'Global Study Gateway');
+    $pwaName = 'VGLTU';
     $logoUrl = $settings['logo_url'] ?? 'https://vgltu.ru/templates/default/images/logo_en.png';
-    $faviconUrl = $settings['favicon_url'] ?? $logoUrl;
+    $iconVersion = '20260528-1';
+    $faviconUrl = asset('logo_en.png') . '?v=' . $iconVersion;
+    $pwaIconUrl = asset('logo_en.png') . '?v=' . $iconVersion;
     $languages = $settings['available_languages'] ?? ['EN'];
     $authUser = auth()->user();
     $allNotifications = $authUser ? $authUser->userNotifications()->get() : collect();
@@ -13,7 +16,7 @@
     $readNotifications = $allNotifications->filter(fn ($notification) => $notification->read_at !== null)->values();
     $notificationCount = $unreadNotifications->count();
     $browserNotificationsEnabled = (bool) ($authUser?->browser_notifications_enabled ?? false);
-    $webPushPublicKey = config('services.webpush.public_key');
+    $webPushPublicKey = config('webpush.vapid.public_key');
     $unreadBrowserNotifications = $unreadNotifications->map(function ($notification) {
         return [
             'id' => $notification->id,
@@ -106,7 +109,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $siteName }}</title>
-    <link rel="icon" href="{{ $faviconUrl }}">
+    <meta name="application-name" content="{{ $pwaName }}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="{{ $pwaName }}">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#241726">
+    <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
+    <link rel="icon" type="image/png" href="{{ $faviconUrl }}">
+    <link rel="shortcut icon" type="image/png" href="{{ $faviconUrl }}">
+    <link rel="apple-touch-icon" href="{{ $pwaIconUrl }}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
     @vite(['resources/css/homepage.css', 'resources/sass/app.scss', 'resources/js/app.js'])
     <style>
@@ -1125,8 +1137,8 @@
                     <a href="{{ $settings['class_routine_link'] ?? url('/class_routine') }}">
                         <i class="far fa-calendar-alt"></i>{{ $settings['class_routine_text'] ?? 'Class Routine' }}
                     </a>
-                    <a href="{{ $settings['university_profile_link'] ?? url('/university_profile') }}">
-                        <i class="far fa-building"></i>{{ $settings['university_profile_text'] ?? 'University Profile' }}
+                    <a href="https://vgltu.ru/lc/login" target="_blank" rel="noopener noreferrer">
+                        <i class="fas fa-external-link-alt"></i>{{ $settings['university_profile_text'] ?? 'University Profile' }}
                     </a>
                 </div>
             </div>
@@ -1397,6 +1409,9 @@
                                 </button>
                             </div>
                         </div>
+                        <div class="text-muted small mb-3" id="browserNotificationStatus">
+                            Production browser push requires HTTPS. Localhost works for local testing.
+                        </div>
 
                         <ul class="nav nav-tabs edu-notification-tabs" id="userNotificationTabs" role="tablist">
                             <li class="nav-item" role="presentation">
@@ -1652,6 +1667,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const browserNotificationToggle = document.getElementById('toggleBrowserNotifications');
+            const browserNotificationStatus = document.getElementById('browserNotificationStatus');
             const markAllNotificationsRead = document.getElementById('markAllNotificationsRead');
             const mobileMarkAllNotificationsRead = document.getElementById('mobileMarkAllNotificationsRead');
             const notificationCountBadges = document.querySelectorAll('.edu-notification-count');
@@ -1788,16 +1804,45 @@
                     return;
                 }
 
+                const isSupported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+
                 if (!webPushPublicKey) {
                     browserNotificationToggle.textContent = 'Push Alerts Unavailable';
                     browserNotificationToggle.disabled = true;
+                    if (browserNotificationStatus) {
+                        browserNotificationStatus.textContent = 'Push notifications are not configured on the server yet.';
+                    }
+                    return;
+                }
+
+                if (!isSupported) {
+                    browserNotificationToggle.textContent = 'Browser Push Unsupported';
+                    browserNotificationToggle.disabled = true;
+                    if (browserNotificationStatus) {
+                        browserNotificationStatus.textContent = 'This browser does not support Service Worker or PushManager notifications.';
+                    }
+                    return;
+                }
+
+                if (Notification.permission === 'denied') {
+                    browserNotificationToggle.textContent = 'Notifications Blocked';
+                    browserNotificationToggle.disabled = true;
+                    if (browserNotificationStatus) {
+                        browserNotificationStatus.textContent = 'Notification permission is blocked in this browser. Please enable it from browser settings.';
+                    }
                     return;
                 }
 
                 browserNotificationToggle.disabled = false;
                 browserNotificationToggle.textContent = browserNotificationsEnabled
-                    ? 'Disable Push Alerts'
-                    : 'Enable Push Alerts';
+                    ? 'Notifications Enabled'
+                    : 'Enable Browser Notifications';
+
+                if (browserNotificationStatus) {
+                    browserNotificationStatus.textContent = browserNotificationsEnabled
+                        ? 'Browser push notifications are active for this account.'
+                        : 'Click the button to allow browser push notifications for this account.';
+                }
             };
 
             const syncNotificationsFeed = async function () {
@@ -1833,33 +1878,35 @@
             const unsubscribeFromPush = async function (subscription) {
                 if (subscription) {
                     await subscription.unsubscribe();
-                }
 
-                await window.axios.delete('{{ route('notifications.push-subscriptions.destroy') }}', {
-                    data: {
-                        endpoint: subscription ? subscription.endpoint : null,
-                    },
-                });
+                    await window.axios.delete('{{ route('push-subscriptions.destroy') }}', {
+                        data: {
+                            endpoint: subscription.endpoint,
+                        },
+                    });
+                } else {
+                    await window.axios.post('{{ route('notifications.browser-preference') }}', {
+                        enabled: false,
+                    });
+                }
 
                 browserNotificationsEnabled = false;
                 setPushToggleLabel();
             };
 
             const syncPushSubscriptionState = async function () {
-                if (!webPushPublicKey || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+                if (!webPushPublicKey || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
                     setPushToggleLabel();
                     return;
                 }
 
                 try {
-                    const registration = await navigator.serviceWorker.ready;
+                    const registration = await (window.vgltuPushRegistration || navigator.serviceWorker.ready);
                     const existingSubscription = await registration.pushManager.getSubscription();
 
                     if (!existingSubscription && browserNotificationsEnabled) {
-                        await window.axios.delete('{{ route('notifications.push-subscriptions.destroy') }}', {
-                            data: {
-                                endpoint: null,
-                            },
+                        await window.axios.post('{{ route('notifications.browser-preference') }}', {
+                            enabled: false,
                         });
                         browserNotificationsEnabled = false;
                     }
@@ -1880,7 +1927,7 @@
                         return;
                     }
 
-                    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
                         window.alert('This browser does not support push notifications.');
                         return;
                     }
@@ -1888,7 +1935,7 @@
                     browserNotificationToggle.disabled = true;
 
                     try {
-                        const registration = await navigator.serviceWorker.ready;
+                        const registration = await (window.vgltuPushRegistration || navigator.serviceWorker.ready);
                         const existingSubscription = await registration.pushManager.getSubscription();
 
                         if (existingSubscription && browserNotificationsEnabled) {
@@ -1901,7 +1948,10 @@
                             : await Notification.requestPermission();
 
                         if (permission !== 'granted') {
-                            window.alert('Push notification permission was not granted.');
+                            setPushToggleLabel();
+                            window.alert(permission === 'denied'
+                                ? 'Notification permission is blocked. Please enable it from your browser settings.'
+                                : 'Push notification permission was not granted.');
                             return;
                         }
 
@@ -1910,15 +1960,21 @@
                             applicationServerKey: urlBase64ToUint8Array(webPushPublicKey),
                         });
 
-                        await window.axios.post('{{ route('notifications.push-subscriptions.store') }}', {
-                            subscription: subscription.toJSON(),
+                        await window.axios.post('{{ route('push-subscriptions.store') }}', {
+                            endpoint: subscription.endpoint,
+                            publicKey: subscription.toJSON().keys ? subscription.toJSON().keys.p256dh : null,
+                            authToken: subscription.toJSON().keys ? subscription.toJSON().keys.auth : null,
+                            contentEncoding: subscription.options && subscription.options.applicationServerKey ? 'aes128gcm' : 'aesgcm',
                         });
 
                         browserNotificationsEnabled = true;
                         setPushToggleLabel();
                     } catch (error) {
                         console.error('Unable to update push subscription.', error);
-                        window.alert('Unable to update push notifications right now.');
+                        const responseMessage = error && error.response && error.response.data && error.response.data.message
+                            ? error.response.data.message
+                            : 'Unable to update push notifications right now. Check your VAPID keys, HTTPS, and service worker setup.';
+                        window.alert(responseMessage);
                     } finally {
                         browserNotificationToggle.disabled = false;
                     }

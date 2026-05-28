@@ -2,24 +2,15 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use NotificationChannels\WebPush\PushSubscription as BasePushSubscription;
 
-class PushSubscription extends Model
+class PushSubscription extends BasePushSubscription
 {
-    use HasFactory;
-
     protected $fillable = [
-        'user_id',
         'endpoint',
         'public_key',
         'auth_token',
         'content_encoding',
         'user_agent',
     ];
-
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
 }

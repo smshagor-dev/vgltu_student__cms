@@ -116,6 +116,18 @@ class PublicSiteData
             'courses_content' => $settings->courses_content,
             'courses_header_url' => PublicAsset::url($settings->courses_header_path, $fallback['courses_header_url']),
             'search_placeholder' => $settings->search_placeholder ?: $fallback['search_placeholder'],
+            'footer_social_links' => collect($settings->footer_social_links ?: $fallback['footer_social_links'])
+                ->map(function (array $item) {
+                    return [
+                        'label' => $item['label'] ?? 'Social',
+                        'url' => self::normalizeMenuUrl($item['url'] ?? '#'),
+                        'icon_url' => PublicAsset::url($item['icon_path'] ?? null, $item['icon_url'] ?? null),
+                        'icon_class' => $item['icon_class'] ?? null,
+                    ];
+                })
+                ->filter(fn (array $item) => filled($item['url']) && (filled($item['icon_url']) || filled($item['icon_class'])))
+                ->values()
+                ->all(),
         ];
     }
 
@@ -212,6 +224,11 @@ class PublicSiteData
                 'courses_content' => null,
                 'courses_header_url' => asset('28020.png'),
                 'search_placeholder' => 'Search universities or countries',
+                'footer_social_links' => [
+                    ['label' => 'Facebook', 'url' => '#', 'icon_class' => 'fab fa-facebook-f', 'icon_url' => null],
+                    ['label' => 'WhatsApp', 'url' => 'https://wa.me/79954949836', 'icon_class' => 'fab fa-whatsapp', 'icon_url' => null],
+                    ['label' => 'Instagram', 'url' => '#', 'icon_class' => 'fab fa-instagram', 'icon_url' => null],
+                ],
             ],
             'menus' => [
                 ['title' => 'Home', 'url' => '/', 'target' => '_self', 'children' => []],

@@ -826,6 +826,12 @@
                     <span>SMTP Settings</span>
                 </span>
             </a>
+            <a href="{{ url('admin/students') }}" class="nav-link-item {{ request()->is('admin/students*') ? 'is-active' : '' }}" data-menu-item>
+                <span class="nav-link-content">
+                    <span class="nav-icon"><i class="fas fa-user-graduate"></i></span>
+                    <span>Alumni & Old Students</span>
+                </span>
+            </a>
         </div>
 
         <div class="sidebar-section" data-menu-section>
@@ -851,7 +857,7 @@
                 </div>
             </div>
 
-            <div class="nav-group {{ request()->is('admin/sliders*') || request()->is('admin/upload*') || request()->is('admin/students*') || request()->routeIs('admin.videos.*') ? 'is-open' : '' }}" data-nav-group>
+            <div class="nav-group {{ request()->is('admin/sliders*') || request()->is('admin/upload*') || request()->routeIs('admin.videos.*') ? 'is-open' : '' }}" data-nav-group>
                 <button type="button" class="nav-group-toggle" data-nav-toggle>
                     <span class="nav-group-title">
                         <span class="nav-icon"><i class="fas fa-photo-film"></i></span>
@@ -863,7 +869,6 @@
                     <a href="{{ url('admin/sliders') }}" class="{{ request()->is('admin/sliders*') ? 'is-active' : '' }}" data-menu-item><i class="fas fa-images"></i> Upload Slider</a>
                     <a href="{{ url('admin/upload') }}" class="{{ request()->is('admin/upload') ? 'is-active' : '' }}" data-menu-item><i class="fas fa-upload"></i> Upload Media</a>
                     <a href="{{ url('admin/upload/view') }}" class="{{ request()->is('admin/upload/view*') ? 'is-active' : '' }}" data-menu-item><i class="fas fa-eye"></i> View Upload</a>
-                    <a href="{{ url('admin/students') }}" class="{{ request()->is('admin/students*') ? 'is-active' : '' }}" data-menu-item><i class="fas fa-box-archive"></i> Old Student</a>
                 </div>
             </div>
 
@@ -871,12 +876,12 @@
                 <button type="button" class="nav-group-toggle" data-nav-toggle>
                     <span class="nav-group-title">
                         <span class="nav-icon"><i class="fas fa-globe"></i></span>
-                        <span>Homepage CMS</span>
+                        <span>Frontend Setting</span>
                     </span>
                     <i class="fas fa-chevron-down chevron"></i>
                 </button>
                 <div class="nav-submenu">
-                    <a href="{{ route('admin.homepage.settings.edit') }}" class="{{ request()->routeIs('admin.homepage.settings.edit') ? 'is-active' : '' }}" data-menu-item><i class="fas fa-sliders"></i> Website Settings</a>
+                    <a href="{{ route('admin.homepage.settings.edit') }}" class="{{ request()->routeIs('admin.homepage.settings.edit') ? 'is-active' : '' }}" data-menu-item><i class="fas fa-sliders"></i> Frontend Settings</a>
                     <a href="{{ route('admin.homepage.pages.about-university.edit') }}" class="{{ request()->routeIs('admin.homepage.pages.about-university.*') ? 'is-active' : '' }}" data-menu-item><i class="fas fa-university"></i> Universities</a>
                     <a href="{{ route('admin.homepage.pages.courses.edit') }}" class="{{ request()->routeIs('admin.homepage.pages.courses.*') ? 'is-active' : '' }}" data-menu-item><i class="fas fa-book-open"></i> Course Page</a>
                     <a href="{{ route('admin.homepage.hero.edit') }}" class="{{ request()->routeIs('admin.homepage.hero.edit') ? 'is-active' : '' }}" data-menu-item><i class="fas fa-star"></i> Hero Section</a>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\WebsiteSetting;
+use App\Support\ImageCompressor;
 use App\Support\UserProfileEditSettings;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -24,6 +25,8 @@ class UserController extends Controller
                 return $query->where('country', $value);
             case 'religion':
                 return $query->where('religion', $value);
+            case 'gender':
+                return $query->where('gender', $value);
             case 'department':
                 return $query->where('department', $value);
             case 'course':
@@ -69,6 +72,8 @@ class UserController extends Controller
         } else {
             $rules = [];
 
+            $rules['photo'] = 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048';
+
             if (in_array('email', $editableFields, true)) {
                 $rules['email'] = 'required|email|unique:users,email,' . Auth::id();
             }
@@ -106,6 +111,14 @@ class UserController extends Controller
         // Update only the fields that the user is allowed to edit
         foreach ($editableFields as $field) {
             $user->{$field} = $request->input($field);
+        }
+
+        if ($request->hasFile('photo')) {
+            if ($user->photo && Storage::disk('public')->exists($user->photo)) {
+                Storage::disk('public')->delete($user->photo);
+            }
+
+            $user->photo = ImageCompressor::storeUploadedFile($request->file('photo'), 'photos');
         }
 
         // Save the updated user information

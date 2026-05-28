@@ -7,15 +7,15 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Notifications\Notifiable;
+use NotificationChannels\WebPush\HasPushSubscriptions;
 use App\Models\StudentsData;
 use App\Models\CampaignSubmission;
 use App\Models\UserNotification;
-use App\Models\PushSubscription;
 use App\Models\EmergencyContact;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasPushSubscriptions;
     
 
     /**
@@ -102,11 +102,6 @@ class User extends Authenticatable
     public function userNotifications()
     {
         return $this->hasMany(UserNotification::class)->latest();
-    }
-
-    public function pushSubscriptions()
-    {
-        return $this->hasMany(PushSubscription::class);
     }
 
     public function emergencyContacts()
