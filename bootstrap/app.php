@@ -16,7 +16,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('visa:send-reminders')->dailyAt('09:00');
     })
     ->withMiddleware(function (Middleware $middleware) {
-        //
+        $middleware->validateCsrfTokens(except: [
+            'login-panel/proxy',
+            'login-panel/proxy/*',
+            'university-student-profile/proxy',
+            'university-student-profile/proxy/*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

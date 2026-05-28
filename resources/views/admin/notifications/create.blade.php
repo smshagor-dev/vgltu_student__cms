@@ -56,6 +56,24 @@
         color: #6c757d;
     }
 
+    .notification-multi-select {
+        min-height: 220px !important;
+    }
+
+    .notification-switch {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 16px 18px;
+        border: 1px solid #dbe4f0;
+        border-radius: 14px;
+        background: #f8fbff;
+    }
+
+    .notification-switch input {
+        margin-top: 4px;
+    }
+
     .notification-actions {
         display: flex;
         justify-content: flex-end;
@@ -85,7 +103,7 @@
 <div class="notification-card">
     <div class="notification-card__heading">
         <h2>Send Notification</h2>
-        <p>Send a portal notification from the admin panel to all users or to one specific user.</p>
+        <p>Send a portal notification from the admin panel to all users, one user, or multiple selected users.</p>
     </div>
 
     <div class="d-flex justify-content-end mb-3">
@@ -115,6 +133,7 @@
                 <select name="recipient_type" id="recipient_type" class="form-select">
                     <option value="all" {{ old('recipient_type', $selectedUser ? 'single' : 'all') === 'all' ? 'selected' : '' }}>All Users</option>
                     <option value="single" {{ old('recipient_type', $selectedUser ? 'single' : 'all') === 'single' ? 'selected' : '' }}>Single User</option>
+                    <option value="multiple" {{ old('recipient_type') === 'multiple' ? 'selected' : '' }}>Multiple Users</option>
                 </select>
             </div>
 
@@ -128,6 +147,18 @@
                         </option>
                     @endforeach
                 </select>
+            </div>
+
+            <div class="notification-field" id="multipleUsersField">
+                <label for="user_ids">Select Multiple Users</label>
+                <select name="user_ids[]" id="user_ids" class="form-select notification-multi-select" multiple>
+                    @foreach ($users as $user)
+                        <option value="{{ $user->id }}" {{ collect(old('user_ids', []))->contains($user->id) ? 'selected' : '' }}>
+                            {{ $user->full_name }} - {{ $user->email }}
+                        </option>
+                    @endforeach
+                </select>
+                <div class="notification-help">Hold Ctrl or Cmd to select multiple users.</div>
             </div>
 
             <div class="notification-field notification-field--full">
@@ -151,6 +182,7 @@
                 <input type="text" name="icon" id="icon" class="form-control" value="{{ old('icon', 'fas fa-bell') }}" placeholder="fas fa-bell">
                 <div class="notification-help">You can use any valid Font Awesome icon class here.</div>
             </div>
+
         </div>
 
         <div class="notification-actions">
@@ -163,14 +195,17 @@
     document.addEventListener('DOMContentLoaded', function () {
         const recipientType = document.getElementById('recipient_type');
         const singleUserField = document.getElementById('singleUserField');
+        const multipleUsersField = document.getElementById('multipleUsersField');
 
         const syncRecipientField = function () {
-            if (!recipientType || !singleUserField) {
+            if (!recipientType || !singleUserField || !multipleUsersField) {
                 return;
             }
 
             const isSingle = recipientType.value === 'single';
+            const isMultiple = recipientType.value === 'multiple';
             singleUserField.style.display = isSingle ? 'block' : 'none';
+            multipleUsersField.style.display = isMultiple ? 'block' : 'none';
         };
 
         syncRecipientField();

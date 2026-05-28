@@ -40,6 +40,7 @@ use App\Http\Controllers\Admin\StudyDestinationController as AdminStudyDestinati
 use App\Http\Controllers\Admin\CampaignController as AdminCampaignController;
 use App\Http\Controllers\Admin\CampaignSubmissionController as AdminCampaignSubmissionController;
 use App\Http\Controllers\Admin\AdminNotificationController;
+use App\Http\Controllers\Admin\AdminEmailNotificationController;
 use App\Http\Controllers\Admin\UserEditPermissionController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\ContactMessageController;
@@ -47,6 +48,7 @@ use App\Http\Controllers\CoursePageController;
 use App\Http\Controllers\UserNotificationController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\ClassRoutineController;
+use App\Http\Controllers\VgltuLoginPanelController;
 
 
 // Route::get('/', function () {
@@ -158,10 +160,14 @@ Route::match(['GET', 'POST'], '/class_routine/proxy', [ClassRoutineController::c
 Route::match(['GET', 'POST'], '/class_routine/proxy/{path}', [ClassRoutineController::class, 'proxy'])
     ->where('path', '.*')
     ->name('class-routine.proxy');
-
-Route::get('/university_profile', function () {
-    return view('university_profile');
-});
+Route::get('/university-student-profile', [VgltuLoginPanelController::class, 'show'])->name('university-student-profile.show');
+Route::get('/university-student-profile/reset', [VgltuLoginPanelController::class, 'reset'])->name('university-student-profile.reset');
+Route::match(['GET', 'POST'], '/university-student-profile/proxy', [VgltuLoginPanelController::class, 'proxy'])->name('university-student-profile.proxy-root');
+Route::match(['GET', 'POST'], '/university-student-profile/proxy/{path}', [VgltuLoginPanelController::class, 'proxy'])
+    ->where('path', '.*')
+    ->name('university-student-profile.proxy');
+Route::redirect('/login-panel', '/university-student-profile');
+Route::redirect('/university_profile', '/university-student-profile')->name('university_profile');
 
 
 //Admin Section
@@ -412,6 +418,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:admin'])->group(functi
     Route::get('/notifications', [AdminNotificationController::class, 'index'])->name('notifications.index');
     Route::get('/notifications/create', [AdminNotificationController::class, 'create'])->name('notifications.create');
     Route::post('/notifications', [AdminNotificationController::class, 'store'])->name('notifications.store');
+    Route::get('/email-notifications', [AdminEmailNotificationController::class, 'index'])->name('email-notifications.index');
+    Route::get('/email-notifications/create', [AdminEmailNotificationController::class, 'create'])->name('email-notifications.create');
+    Route::post('/email-notifications', [AdminEmailNotificationController::class, 'store'])->name('email-notifications.store');
     Route::get('/contact-messages', [ContactMessageController::class, 'adminIndex'])->name('contact-messages.index');
     Route::get('/contact-messages/{contactMessage}', [ContactMessageController::class, 'adminShow'])->name('contact-messages.show');
     Route::delete('/contact-messages/{contactMessage}', [ContactMessageController::class, 'destroy'])->name('contact-messages.destroy');

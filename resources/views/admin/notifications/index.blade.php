@@ -87,6 +87,7 @@
         text-align: center;
         color: #6c757d;
     }
+
 </style>
 
 <div class="notification-history">

@@ -10,9 +10,9 @@ use Illuminate\Support\Facades\Mail;
 
 class UserEmailService
 {
-    public static function sendRegistrationPending(User $user, string $plainPassword): void
+    public static function sendRegistrationPending(User $user, string $plainPassword): bool
     {
-        self::send(
+        return self::send(
             $user->email,
             'Registration Successful - Pending Approval',
             view('emails.registration-pending', [
@@ -23,9 +23,9 @@ class UserEmailService
         );
     }
 
-    public static function sendApproval(User $user): void
+    public static function sendApproval(User $user): bool
     {
-        self::send(
+        return self::send(
             $user->email,
             'Congratulations! Your Account Has Been Approved',
             view('emails.user-approved', [
@@ -36,9 +36,9 @@ class UserEmailService
         );
     }
 
-    public static function sendRejection(User $user): void
+    public static function sendRejection(User $user): bool
     {
-        self::send(
+        return self::send(
             $user->email,
             'Registration Update',
             view('emails.user-rejected', [
@@ -47,9 +47,9 @@ class UserEmailService
         );
     }
 
-    public static function sendCampaignAnnouncement(User $user, Campaign $campaign, string $notificationTitle, string $notificationDescription): void
+    public static function sendCampaignAnnouncement(User $user, Campaign $campaign, string $notificationTitle, string $notificationDescription): bool
     {
-        self::send(
+        return self::send(
             $user->email,
             $notificationTitle,
             view('emails.campaign-announcement', [
@@ -62,9 +62,9 @@ class UserEmailService
         );
     }
 
-    public static function sendVisaOverdueReminder(User $user, CarbonInterface $expiryDate, string $editUrl): void
+    public static function sendVisaOverdueReminder(User $user, CarbonInterface $expiryDate, string $editUrl): bool
     {
-        self::send(
+        return self::send(
             $user->email,
             'Urgent: Update your expired visa information',
             view('emails.visa-overdue-reminder', [
@@ -75,9 +75,9 @@ class UserEmailService
         );
     }
 
-    public static function sendPasswordReset(User $user, string $plainPassword): void
+    public static function sendPasswordReset(User $user, string $plainPassword): bool
     {
-        self::send(
+        return self::send(
             $user->email,
             'Your account password has been reset',
             view('emails.user-password-reset', [
@@ -88,22 +88,54 @@ class UserEmailService
         );
     }
 
-    private static function send(?string $email, string $subject, string $html): void
+    public static function sendAdminNotification(User $user, string $title, ?string $description = null, ?string $actionUrl = null): bool
+    {
+        return self::send(
+            $user->email,
+            $title,
+            view('emails.admin-notification', [
+                'user' => $user,
+                'title' => $title,
+                'description' => $description,
+                'actionUrl' => $actionUrl ?: route('home'),
+            ])->render()
+        );
+    }
+
+    public static function sendAdminEmailCampaign(User $user, string $title, string $bodyHtml, ?string $actionUrl = null): bool
+    {
+        return self::send(
+            $user->email,
+            $title,
+            view('emails.admin-email-campaign', [
+                'user' => $user,
+                'title' => $title,
+                'bodyHtml' => $bodyHtml,
+                'actionUrl' => $actionUrl ?: route('home'),
+            ])->render()
+        );
+    }
+
+    private static function send(?string $email, string $subject, string $html): bool
     {
         if (! $email) {
-            return;
+            return false;
         }
 
         try {
             Mail::html($html, function ($message) use ($email, $subject) {
                 $message->to($email)->subject($subject);
             });
+
+            return true;
         } catch (\Throwable $exception) {
             Log::error('Unable to send user email.', [
                 'email' => $email,
                 'subject' => $subject,
                 'error' => $exception->getMessage(),
             ]);
+
+            return false;
         }
     }
 }

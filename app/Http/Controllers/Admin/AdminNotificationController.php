@@ -8,7 +8,6 @@ use App\Models\UserNotification;
 use App\Support\UserNotificationPublisher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class AdminNotificationController extends Controller
 {
@@ -63,8 +62,10 @@ class AdminNotificationController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'recipient_type' => 'required|in:all,single',
+            'recipient_type' => 'required|in:all,single,multiple',
             'user_id' => 'nullable|required_if:recipient_type,single|exists:users,id',
+            'user_ids' => 'nullable|required_if:recipient_type,multiple|array|min:1',
+            'user_ids.*' => 'integer|exists:users,id',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string|max:2000',
             'url' => 'nullable|string|max:255',
@@ -80,20 +81,36 @@ class AdminNotificationController extends Controller
             'icon' => $validated['icon'] ?: 'fas fa-bell',
         ];
 
-        if ($validated['recipient_type'] === 'single') {
-            $user = User::findOrFail($validated['user_id']);
+        $recipients = $this->resolveRecipients($validated);
 
-            UserNotificationPublisher::sendToUser($user->id, $payload);
-
-            return redirect()
-                ->route('admin.notifications.create', ['user_id' => $user->id])
-                ->with('success', 'Notification sent to ' . $user->full_name . '.');
+        if ($recipients->isEmpty()) {
+            return back()->withErrors([
+                'recipient_type' => 'No users found for the selected recipient type.',
+            ])->withInput();
         }
 
-        UserNotificationPublisher::broadcastToUsers($payload);
+        if ($validated['recipient_type'] === 'single') {
+            UserNotificationPublisher::sendToUser($recipients->first()->id, $payload);
+        } else {
+            UserNotificationPublisher::sendToUsers($recipients->pluck('id')->all(), $payload);
+        }
+
+        $recipientCount = $recipients->count();
+        $message = 'Notification sent to ' . $recipientCount . ' user' . ($recipientCount === 1 ? '' : 's') . '.';
 
         return redirect()
-            ->route('admin.notifications.create')
-            ->with('success', 'Notification sent to all users.');
+            ->route('admin.notifications.create', $validated['recipient_type'] === 'single' ? ['user_id' => $recipients->first()->id] : [])
+            ->with('success', $message);
+    }
+
+    private function resolveRecipients(array $validated)
+    {
+        $query = User::query()->select('id', 'full_name', 'email');
+
+        return match ($validated['recipient_type']) {
+            'all' => $query->orderBy('id')->get(),
+            'single' => $query->whereKey($validated['user_id'])->get(),
+            'multiple' => $query->whereIn('id', $validated['user_ids'] ?? [])->orderBy('full_name')->get(),
+        };
     }
 }

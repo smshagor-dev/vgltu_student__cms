@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Notifications\CustomResetPasswordNotification;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -10,6 +11,7 @@ use Illuminate\Notifications\Notifiable;
 use NotificationChannels\WebPush\HasPushSubscriptions;
 use App\Models\StudentsData;
 use App\Models\CampaignSubmission;
+use App\Models\NotificationEmailRecipient;
 use App\Models\UserNotification;
 use App\Models\EmergencyContact;
 
@@ -109,8 +111,13 @@ class User extends Authenticatable
         return $this->hasMany(EmergencyContact::class)->latest();
     }
 
+    public function notificationEmailRecipients()
+    {
+        return $this->hasMany(NotificationEmailRecipient::class)->latest();
+    }
 
-
-
-     
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new CustomResetPasswordNotification($token));
+    }
 }

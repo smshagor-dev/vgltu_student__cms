@@ -49,6 +49,10 @@
                 linear-gradient(180deg, #eef4fb 0%, #f8fbff 100%);
         }
 
+        body.admin-nav-open {
+            overflow: hidden;
+        }
+
         a {
             text-decoration: none;
         }
@@ -408,6 +412,10 @@
             padding: 6px 2px 24px;
         }
 
+        .content-frame > .container {
+            width: 100%;
+        }
+
         .admin-page {
             display: grid;
             gap: 24px;
@@ -628,6 +636,11 @@
             vertical-align: middle;
         }
 
+        .table-responsive,
+        .admin-table-wrap {
+            -webkit-overflow-scrolling: touch;
+        }
+
         .table > :not(caption) > * > * {
             padding: 0.95rem 1rem;
             border-bottom-color: rgba(226, 232, 240, 0.85);
@@ -709,6 +722,11 @@
             padding: 1rem 1.2rem;
         }
 
+        .pagination {
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
         .admin-overlay {
             position: fixed;
             inset: 0;
@@ -739,6 +757,8 @@
             .admin-sidebar {
                 transform: translateX(-100%);
                 transition: transform 0.24s ease;
+                width: min(88vw, 320px);
+                max-width: 320px;
             }
 
             .admin-sidebar.is-open {
@@ -747,7 +767,8 @@
 
             .admin-main {
                 margin-left: 0;
-                padding: 16px;
+                width: 100%;
+                padding: 14px;
             }
 
             .sidebar-toggle {
@@ -755,8 +776,40 @@
             }
 
             .topbar {
+                position: sticky;
+                top: 12px;
+                z-index: 1020;
                 padding: 16px;
                 border-radius: 22px;
+            }
+
+            .topbar-title h1 {
+                font-size: 1.25rem;
+            }
+
+            .topbar-title p {
+                font-size: 0.88rem;
+            }
+
+            .content-frame {
+                padding-bottom: 18px;
+            }
+
+            .admin-hero-card,
+            .admin-panel,
+            .admin-data-card,
+            .admin-form-shell,
+            .card,
+            .table-responsive,
+            .alert,
+            .modal-content {
+                border-radius: 20px;
+            }
+
+            .admin-panel,
+            .admin-data-card,
+            .admin-form-shell {
+                padding: 18px;
             }
         }
 
@@ -764,20 +817,181 @@
             .topbar {
                 align-items: flex-start;
                 flex-direction: column;
+                gap: 14px;
+                padding: 14px;
             }
 
             .topbar-actions {
                 width: 100%;
-                justify-content: space-between;
+                justify-content: flex-start;
+                gap: 10px;
             }
 
             .profile-trigger .profile-text {
                 display: none;
             }
 
+            .status-pill,
+            .time-chip {
+                padding: 9px 12px;
+                font-size: 0.8rem;
+            }
+
+            .profile-trigger {
+                margin-left: auto;
+            }
+
+            .brand-card {
+                padding: 16px;
+                border-radius: 18px;
+            }
+
+            .brand-mark {
+                width: 44px;
+                height: 44px;
+                border-radius: 14px;
+            }
+
+            .sidebar-search {
+                margin-bottom: 18px;
+            }
+
+            .nav-link-item,
+            .nav-group-toggle {
+                padding: 12px;
+                border-radius: 14px;
+                font-size: 0.9rem;
+            }
+
+            .nav-icon {
+                width: 34px;
+                height: 34px;
+            }
+
             .admin-grid-2,
             .admin-grid-3 {
                 grid-template-columns: 1fr;
+            }
+
+            .admin-toolbar {
+                gap: 12px;
+            }
+
+            .admin-toolbar__title p {
+                font-size: 0.9rem;
+            }
+
+            .admin-hero-card {
+                padding: 22px 20px;
+            }
+
+            .admin-panel,
+            .admin-data-card,
+            .admin-form-shell {
+                padding: 16px;
+            }
+
+            .admin-stat-card {
+                padding: 18px;
+            }
+
+            .admin-media {
+                width: 72px;
+                height: 72px;
+                border-radius: 18px;
+            }
+
+            .admin-avatar {
+                width: 48px;
+                height: 48px;
+                border-radius: 16px;
+            }
+
+            .table > :not(caption) > * > * {
+                padding: 0.8rem 0.75rem;
+                white-space: nowrap;
+            }
+
+            .btn {
+                width: 100%;
+            }
+
+            .admin-actions-inline {
+                align-items: stretch;
+            }
+
+            .admin-actions-inline .btn,
+            .admin-actions-inline form,
+            .admin-actions-inline a {
+                width: 100%;
+            }
+
+            .input-group {
+                flex-wrap: wrap;
+            }
+
+            .input-group > .form-control,
+            .input-group > .form-select,
+            .input-group > .btn {
+                width: 100%;
+                border-radius: 14px !important;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .admin-main {
+                padding: 12px;
+            }
+
+            .topbar {
+                top: 8px;
+                margin-bottom: 16px;
+            }
+
+            .topbar-start {
+                width: 100%;
+                align-items: flex-start;
+            }
+
+            .sidebar-toggle {
+                width: 42px;
+                height: 42px;
+                flex-shrink: 0;
+            }
+
+            .topbar-actions {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                align-items: stretch;
+            }
+
+            .topbar-actions .dropdown {
+                grid-column: 1 / -1;
+            }
+
+            .profile-trigger {
+                width: 100%;
+                justify-content: center;
+                margin-left: 0;
+            }
+
+            .profile-trigger .profile-text {
+                display: block;
+            }
+
+            .profile-text {
+                text-align: center;
+            }
+
+            .admin-hero-card,
+            .admin-panel,
+            .admin-data-card,
+            .admin-form-shell {
+                border-radius: 18px;
+            }
+
+            .admin-kv-item {
+                padding: 12px 14px;
             }
         }
     </style>
@@ -933,7 +1147,7 @@
                 </div>
             </div>
 
-            <div class="nav-group {{ request()->routeIs('admin.notifications.*') ? 'is-open' : '' }}" data-nav-group>
+            <div class="nav-group {{ request()->routeIs('admin.notifications.*') || request()->routeIs('admin.email-notifications.*') ? 'is-open' : '' }}" data-nav-group>
                 <button type="button" class="nav-group-toggle" data-nav-toggle>
                     <span class="nav-group-title">
                         <span class="nav-icon"><i class="fas fa-bell"></i></span>
@@ -944,6 +1158,8 @@
                 <div class="nav-submenu">
                     <a href="{{ route('admin.notifications.create') }}" class="{{ request()->routeIs('admin.notifications.create') ? 'is-active' : '' }}" data-menu-item><i class="fas fa-paper-plane"></i> Send Notification</a>
                     <a href="{{ route('admin.notifications.index') }}" class="{{ request()->routeIs('admin.notifications.index') ? 'is-active' : '' }}" data-menu-item><i class="fas fa-list-check"></i> Notification List</a>
+                    <a href="{{ route('admin.email-notifications.create') }}" class="{{ request()->routeIs('admin.email-notifications.create') ? 'is-active' : '' }}" data-menu-item><i class="fas fa-envelope-circle-check"></i> Send Email</a>
+                    <a href="{{ route('admin.email-notifications.index') }}" class="{{ request()->routeIs('admin.email-notifications.index') ? 'is-active' : '' }}" data-menu-item><i class="fas fa-clock-rotate-left"></i> Email History</a>
                 </div>
             </div>
 
@@ -1128,11 +1344,13 @@
     function closeSidebar() {
         sidebar.classList.remove('is-open');
         overlay.classList.remove('is-visible');
+        document.body.classList.remove('admin-nav-open');
     }
 
     function openSidebar() {
         sidebar.classList.add('is-open');
         overlay.classList.add('is-visible');
+        document.body.classList.add('admin-nav-open');
     }
 
     if (sidebarToggle) {
@@ -1154,6 +1372,20 @@
             const group = this.closest('[data-nav-group]');
             group.classList.toggle('is-open');
         });
+    });
+
+    document.querySelectorAll('.admin-sidebar a').forEach(function (link) {
+        link.addEventListener('click', function () {
+            if (window.innerWidth < 992) {
+                closeSidebar();
+            }
+        });
+    });
+
+    window.addEventListener('resize', function () {
+        if (window.innerWidth >= 992) {
+            closeSidebar();
+        }
     });
 
     if (filterInput) {

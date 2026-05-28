@@ -1137,8 +1137,8 @@
                     <a href="{{ $settings['class_routine_link'] ?? url('/class_routine') }}">
                         <i class="far fa-calendar-alt"></i>{{ $settings['class_routine_text'] ?? 'Class Routine' }}
                     </a>
-                    <a href="https://vgltu.ru/lc/login" target="_blank" rel="noopener noreferrer">
-                        <i class="fas fa-external-link-alt"></i>{{ $settings['university_profile_text'] ?? 'University Profile' }}
+                    <a href="{{ route('university_profile') }}">
+                        <i class="fas fa-user-shield"></i>{{ $settings['university_profile_text'] ?? 'University Profile' }}
                     </a>
                 </div>
             </div>

@@ -356,9 +356,9 @@
 
                     <div class="register-field">
                         <label for="country">Select Country code</label>
-                        <select class="form-control" id="country" name="country" required>
-                            <option value="RU" {{ old('country') == 'RU' ? 'selected' : '' }}>Russia (+7)</option>
-                            <option value="BD" {{ old('country') == 'BD' ? 'selected' : '' }}>Bangladesh (+88)</option>
+                        <select class="form-control" id="country" name="phone_country_code" required>
+                            <option value="RU" {{ old('phone_country_code') == 'RU' ? 'selected' : '' }}>Russia (+7)</option>
+                            <option value="BD" {{ old('phone_country_code') == 'BD' ? 'selected' : '' }}>Bangladesh (+88)</option>
                         </select>
                     </div>
 
@@ -468,10 +468,10 @@
                             <option value="Landscape Architecture" {{ old('department') == 'Landscape Architecture' ? 'selected' : '' }}>Landscape Architecture</option>
                             <option value="Tourism" {{ old('department') == 'Tourism' ? 'selected' : '' }}>Tourism</option>
                             <option value="automation of production processes" {{ old('department') == 'automation of production processes' ? 'selected' : '' }}>automation of production processes</option>
-                            <option value=" Life Safety and Legal Relations" {{ old('department') == ' Life Safety and Legal Relations' ? 'selected' : '' }}> Life Safety and Legal Relations</option>
+                            <option value="Life Safety and Legal Relations" {{ old('department') == 'Life Safety and Legal Relations' ? 'selected' : '' }}>Life Safety and Legal Relations</option>
                             <option value="Botany and Plant Physiology" {{ old('department') == 'Botany and Plant Physiology' ? 'selected' : '' }}>Botany and Plant Physiology</option>
                             <option value="Hardware and Software" {{ old('department') == 'Hardware and Software' ? 'selected' : '' }}>Hardware and Software</option>
-                            <option value="Other" {{ old('department') == 'Other' ? 'selected' : '' }}>Other</option>
+                            <!-- <option value="Other" {{ old('department') == 'Other' ? 'selected' : '' }}>Other</option> -->
                         </select>
                         @error('department')
                             <span class="register-error">{{ $message }}</span>
@@ -516,7 +516,7 @@
                         <label for="photo">Upload Photo</label>
                         <input type="file" class="form-control" id="photo" name="photo" required>
                         <span class="register-error" style="color: #6f6572; font-weight: 500;">Allowed: JPG, JPEG, PNG, GIF. Max size: 2048 KB (2 MB).</span>
-                        @error('Photo')
+                        @error('photo')
                             <span class="register-error">{{ $message }}</span>
                         @enderror
                     </div>
@@ -668,6 +668,46 @@ document.addEventListener("DOMContentLoaded", function() {
         if ((e.key === "Backspace" || e.key === "Delete") &&
             mobileInput.selectionStart <= countryCode.length) {
             e.preventDefault();
+        }
+    });
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const photoInput = document.getElementById('photo');
+    const form = photoInput ? photoInput.closest('form') : null;
+    const maxPhotoSize = 2 * 1024 * 1024;
+
+    if (!photoInput || !form) {
+        return;
+    }
+
+    const validatePhotoSize = () => {
+        const file = photoInput.files && photoInput.files[0];
+
+        if (!file) {
+            photoInput.setCustomValidity('');
+            return true;
+        }
+
+        if (file.size > maxPhotoSize) {
+            photoInput.setCustomValidity('Selected photo is larger than 2 MB.');
+            alert('Selected photo is larger than 2 MB. Please choose a smaller file.');
+            photoInput.value = '';
+            return false;
+        }
+
+        photoInput.setCustomValidity('');
+        return true;
+    };
+
+    photoInput.addEventListener('change', validatePhotoSize);
+
+    form.addEventListener('submit', function (event) {
+        if (!validatePhotoSize()) {
+            event.preventDefault();
+            photoInput.reportValidity();
         }
     });
 });
