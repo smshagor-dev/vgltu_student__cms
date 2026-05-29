@@ -1,7 +1,6 @@
 @extends('layouts.admin_app')
 
 @php
-    $menuTextField = $pageKey . '_menu_text';
     $titleField = $pageKey . '_title';
     $contentField = $pageKey . '_content';
     $headerField = $pageKey . '_header_path';
@@ -37,10 +36,6 @@
         </div>
 
         <div class="admin-grid-2">
-            <div class="mb-3">
-                <label class="form-label">Menu Text</label>
-                <input type="text" name="menu_text" class="form-control" value="{{ old('menu_text', $settings->{$menuTextField}) }}" required>
-            </div>
             <div class="mb-3">
                 <label class="form-label">Page Title</label>
                 <input type="text" name="title" class="form-control" value="{{ old('title', $settings->{$titleField}) }}">

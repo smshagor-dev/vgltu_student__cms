@@ -54,7 +54,7 @@ class LoginController extends Controller
         ]);
     }
 
-    protected $redirectTo = '/home';
+    protected $redirectTo = '/dashboard';
 
     protected function authenticated(Request $request, $user)
     {

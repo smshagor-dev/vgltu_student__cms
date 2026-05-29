@@ -1410,13 +1410,7 @@
                             </div>
                             <div class="edu-notification-tools__actions">
                                 <button type="button" class="edu-notification-secondary-btn" id="markAllNotificationsRead">Mark all as read</button>
-                                <button type="button" class="edu-notification-primary-btn" id="toggleBrowserNotifications" {{ empty($webPushPublicKey) ? 'disabled' : '' }}>
-                                    {{ empty($webPushPublicKey) ? 'Push Alerts Unavailable' : ($browserNotificationsEnabled ? 'Disable Push Alerts' : 'Enable Push Alerts') }}
-                                </button>
                             </div>
-                        </div>
-                        <div class="text-muted small mb-3" id="browserNotificationStatus">
-                            Production browser push requires HTTPS. Localhost works for local testing.
                         </div>
 
                         <ul class="nav nav-tabs edu-notification-tabs" id="userNotificationTabs" role="tablist">
@@ -1673,10 +1667,10 @@
     @if (session('login_success') || session('registration_success') || (old('login_modal') && ($errors->has('email') || $errors->has('password'))))
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     @endif
-    <script>
+        <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const browserNotificationToggle = document.getElementById('toggleBrowserNotifications');
-            const browserNotificationStatus = document.getElementById('browserNotificationStatus');
+            const browserNotificationToggles = document.querySelectorAll('[data-browser-notification-toggle]');
+            const browserNotificationStatuses = document.querySelectorAll('[data-browser-notification-status]');
             const markAllNotificationsRead = document.getElementById('markAllNotificationsRead');
             const mobileMarkAllNotificationsRead = document.getElementById('mobileMarkAllNotificationsRead');
             const notificationCountBadges = document.querySelectorAll('.edu-notification-count');
@@ -1685,6 +1679,7 @@
             const desktopNotificationTabContent = document.getElementById('desktopNotificationTabContent');
             const mobileNotificationTabContent = document.getElementById('mobileNotificationTabContent');
             const webPushPublicKey = @json($webPushPublicKey);
+            const canPersistPushSubscription = @json((bool) $authUser);
             let unreadBrowserNotifications = @json($unreadBrowserNotifications);
             let browserNotificationsEnabled = @json($browserNotificationsEnabled);
             let currentUnreadCount = unreadBrowserNotifications.length;
@@ -1809,49 +1804,53 @@
             };
 
             const setPushToggleLabel = function () {
-                if (!browserNotificationToggle) {
+                if (!browserNotificationToggles.length) {
                     return;
                 }
 
                 const isSupported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+                const setStatus = function (message) {
+                    browserNotificationStatuses.forEach(function (statusNode) {
+                        statusNode.textContent = message;
+                    });
+                };
+                const setToggleState = function (label, disabled) {
+                    browserNotificationToggles.forEach(function (toggleNode) {
+                        toggleNode.disabled = !!disabled;
+
+                        const strongNode = toggleNode.querySelector('strong');
+                        if (strongNode) {
+                            strongNode.textContent = label;
+                        } else {
+                            toggleNode.textContent = label;
+                        }
+                    });
+                };
 
                 if (!webPushPublicKey) {
-                    browserNotificationToggle.textContent = 'Push Alerts Unavailable';
-                    browserNotificationToggle.disabled = true;
-                    if (browserNotificationStatus) {
-                        browserNotificationStatus.textContent = 'Push notifications are not configured on the server yet.';
-                    }
+                    setToggleState('Push Alerts Unavailable', true);
+                    setStatus('Push notifications are not configured on the server yet.');
                     return;
                 }
 
                 if (!isSupported) {
-                    browserNotificationToggle.textContent = 'Browser Push Unsupported';
-                    browserNotificationToggle.disabled = true;
-                    if (browserNotificationStatus) {
-                        browserNotificationStatus.textContent = 'This browser does not support Service Worker or PushManager notifications.';
-                    }
+                    setToggleState('Browser Push Unsupported', true);
+                    setStatus('This browser does not support Service Worker or PushManager notifications.');
                     return;
                 }
 
                 if (Notification.permission === 'denied') {
-                    browserNotificationToggle.textContent = 'Notifications Blocked';
-                    browserNotificationToggle.disabled = true;
-                    if (browserNotificationStatus) {
-                        browserNotificationStatus.textContent = 'Notification permission is blocked in this browser. Please enable it from browser settings.';
-                    }
+                    setToggleState('Notifications Blocked', true);
+                    setStatus('Notification permission is blocked in this browser. Please enable it from browser settings.');
                     return;
                 }
 
-                browserNotificationToggle.disabled = false;
-                browserNotificationToggle.textContent = browserNotificationsEnabled
+                setToggleState(browserNotificationsEnabled
                     ? 'Notifications Enabled'
-                    : 'Enable Browser Notifications';
-
-                if (browserNotificationStatus) {
-                    browserNotificationStatus.textContent = browserNotificationsEnabled
+                    : 'Enable Browser Notifications', false);
+                setStatus(browserNotificationsEnabled
                         ? 'Browser push notifications are active for this account.'
-                        : 'Click the button to allow browser push notifications for this account.';
-                }
+                        : 'Click the button to allow browser push notifications for this account.');
             };
 
             const syncNotificationsFeed = async function () {
@@ -1903,6 +1902,78 @@
                 setPushToggleLabel();
             };
 
+            const registerPushSubscriptionWithServer = async function (subscription) {
+                if (!canPersistPushSubscription) {
+                    return;
+                }
+
+                await window.axios.post('{{ route('push-subscriptions.store') }}', {
+                    endpoint: subscription.endpoint,
+                    publicKey: subscription.toJSON().keys ? subscription.toJSON().keys.p256dh : null,
+                    authToken: subscription.toJSON().keys ? subscription.toJSON().keys.auth : null,
+                    contentEncoding: subscription.options && subscription.options.applicationServerKey ? 'aes128gcm' : 'aesgcm',
+                });
+
+                browserNotificationsEnabled = true;
+                setPushToggleLabel();
+            };
+
+            const ensureAutoPushSubscription = async function () {
+                if (!webPushPublicKey || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+                    return;
+                }
+
+                if (Notification.permission !== 'granted') {
+                    return;
+                }
+
+                try {
+                    const registration = await (window.vgltuPushRegistration || navigator.serviceWorker.ready);
+                    const existingSubscription = await registration.pushManager.getSubscription();
+                    const subscription = existingSubscription || await registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(webPushPublicKey),
+                    });
+
+                    if (canPersistPushSubscription && (!browserNotificationsEnabled || !existingSubscription)) {
+                        await registerPushSubscriptionWithServer(subscription);
+                    }
+                } catch (error) {
+                    console.error('Unable to auto-enable push subscription.', error);
+                }
+            };
+
+            const promptForPushPermissionAfterRegistration = async function () {
+                if (!webPushPublicKey || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+                    return;
+                }
+
+                if (Notification.permission !== 'default') {
+                    await ensureAutoPushSubscription();
+                    return;
+                }
+
+                try {
+                    const permission = await Notification.requestPermission();
+
+                    if (permission !== 'granted') {
+                        return;
+                    }
+
+                    const registration = await (window.vgltuPushRegistration || navigator.serviceWorker.ready);
+                    const existingSubscription = await registration.pushManager.getSubscription();
+
+                    if (!existingSubscription) {
+                        await registration.pushManager.subscribe({
+                            userVisibleOnly: true,
+                            applicationServerKey: urlBase64ToUint8Array(webPushPublicKey),
+                        });
+                    }
+                } catch (error) {
+                    console.error('Unable to request push permission after registration.', error);
+                }
+            };
+
             const syncPushSubscriptionState = async function () {
                 if (!webPushPublicKey || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
                     setPushToggleLabel();
@@ -1918,6 +1989,8 @@
                             enabled: false,
                         });
                         browserNotificationsEnabled = false;
+                    } else if (existingSubscription && Notification.permission === 'granted' && !browserNotificationsEnabled) {
+                        await registerPushSubscriptionWithServer(existingSubscription);
                     }
 
                     setPushToggleLabel();
@@ -1927,66 +2000,64 @@
                 }
             };
 
-            if (browserNotificationToggle) {
+            if (browserNotificationToggles.length) {
                 setPushToggleLabel();
 
-                browserNotificationToggle.addEventListener('click', async function () {
-                    if (!webPushPublicKey) {
-                        window.alert('Web push is not configured yet on the server.');
-                        return;
-                    }
-
-                    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
-                        window.alert('This browser does not support push notifications.');
-                        return;
-                    }
-
-                    browserNotificationToggle.disabled = true;
-
-                    try {
-                        const registration = await (window.vgltuPushRegistration || navigator.serviceWorker.ready);
-                        const existingSubscription = await registration.pushManager.getSubscription();
-
-                        if (existingSubscription && browserNotificationsEnabled) {
-                            await unsubscribeFromPush(existingSubscription);
+                browserNotificationToggles.forEach(function (toggleNode) {
+                    toggleNode.addEventListener('click', async function () {
+                        if (!webPushPublicKey) {
+                            window.alert('Web push is not configured yet on the server.');
                             return;
                         }
 
-                        const permission = Notification.permission === 'granted'
-                            ? 'granted'
-                            : await Notification.requestPermission();
-
-                        if (permission !== 'granted') {
-                            setPushToggleLabel();
-                            window.alert(permission === 'denied'
-                                ? 'Notification permission is blocked. Please enable it from your browser settings.'
-                                : 'Push notification permission was not granted.');
+                        if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+                            window.alert('This browser does not support push notifications.');
                             return;
                         }
 
-                        const subscription = existingSubscription || await registration.pushManager.subscribe({
-                            userVisibleOnly: true,
-                            applicationServerKey: urlBase64ToUint8Array(webPushPublicKey),
+                        browserNotificationToggles.forEach(function (node) {
+                            node.disabled = true;
                         });
 
-                        await window.axios.post('{{ route('push-subscriptions.store') }}', {
-                            endpoint: subscription.endpoint,
-                            publicKey: subscription.toJSON().keys ? subscription.toJSON().keys.p256dh : null,
-                            authToken: subscription.toJSON().keys ? subscription.toJSON().keys.auth : null,
-                            contentEncoding: subscription.options && subscription.options.applicationServerKey ? 'aes128gcm' : 'aesgcm',
-                        });
+                        try {
+                            const registration = await (window.vgltuPushRegistration || navigator.serviceWorker.ready);
+                            const existingSubscription = await registration.pushManager.getSubscription();
 
-                        browserNotificationsEnabled = true;
-                        setPushToggleLabel();
-                    } catch (error) {
-                        console.error('Unable to update push subscription.', error);
-                        const responseMessage = error && error.response && error.response.data && error.response.data.message
-                            ? error.response.data.message
-                            : 'Unable to update push notifications right now. Check your VAPID keys, HTTPS, and service worker setup.';
-                        window.alert(responseMessage);
-                    } finally {
-                        browserNotificationToggle.disabled = false;
-                    }
+                            if (existingSubscription && browserNotificationsEnabled) {
+                                await unsubscribeFromPush(existingSubscription);
+                                return;
+                            }
+
+                            const permission = Notification.permission === 'granted'
+                                ? 'granted'
+                                : await Notification.requestPermission();
+
+                            if (permission !== 'granted') {
+                                setPushToggleLabel();
+                                window.alert(permission === 'denied'
+                                    ? 'Notification permission is blocked. Please enable it from your browser settings.'
+                                    : 'Push notification permission was not granted.');
+                                return;
+                            }
+
+                            const subscription = existingSubscription || await registration.pushManager.subscribe({
+                                userVisibleOnly: true,
+                                applicationServerKey: urlBase64ToUint8Array(webPushPublicKey),
+                            });
+
+                            await registerPushSubscriptionWithServer(subscription);
+                        } catch (error) {
+                            console.error('Unable to update push subscription.', error);
+                            const responseMessage = error && error.response && error.response.data && error.response.data.message
+                                ? error.response.data.message
+                                : 'Unable to update push notifications right now. Check your VAPID keys, HTTPS, and service worker setup.';
+                            window.alert(responseMessage);
+                        } finally {
+                            browserNotificationToggles.forEach(function (node) {
+                                node.disabled = false;
+                            });
+                        }
+                    });
                 });
             }
 
@@ -2069,6 +2140,7 @@
 
             window.setInterval(syncNotificationsFeed, 15000);
             syncNotificationsFeed();
+            ensureAutoPushSubscription();
             syncPushSubscriptionState();
 
             @if (old('login_modal'))
@@ -2096,7 +2168,11 @@
                         title: 'Registration Successful',
                         text: @json(session('registration_success')),
                         confirmButtonColor: '#bb3e71'
+                    }).then(function () {
+                        return promptForPushPermissionAfterRegistration();
                     });
+                } else {
+                    promptForPushPermissionAfterRegistration();
                 }
             @endif
 

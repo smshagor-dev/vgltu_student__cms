@@ -1,6 +1,10 @@
 @extends('layouts.admin_app')
 
 @section('content')
+@php
+    $selectedMultipleUsers = collect(old('user_ids', []))->map(fn ($id) => (string) $id)->all();
+    $selectedSingleUser = old('user_id', $selectedUser?->id);
+@endphp
 <style>
     .email-campaign-card {
         max-width: 1100px;
@@ -84,8 +88,224 @@
         font-weight: 800;
     }
 
-    .email-campaign-multi-select {
-        min-height: 220px !important;
+    .email-campaign-recipient-panel {
+        border: 1px solid rgba(148, 163, 184, 0.24);
+        border-radius: 18px;
+        background: linear-gradient(180deg, #fcfdff 0%, #f8fbff 100%);
+        overflow: hidden;
+    }
+
+    .email-campaign-recipient-toolbar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        padding: 14px;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+        background: rgba(255, 255, 255, 0.9);
+    }
+
+    .email-campaign-recipient-search,
+    .email-campaign-recipient-selected-search {
+        min-height: 46px;
+        border-radius: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        padding: 0 14px;
+        width: 100%;
+    }
+
+    .email-campaign-recipient-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 120px;
+        padding: 0 16px;
+        border-radius: 999px;
+        background: #e8f0ff;
+        color: #1d4ed8;
+        font-size: 0.84rem;
+        font-weight: 800;
+    }
+
+    .email-campaign-recipient-shell {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+        gap: 0;
+    }
+
+    .email-campaign-user-browser,
+    .email-campaign-selected-preview {
+        padding: 14px;
+    }
+
+    .email-campaign-user-browser {
+        border-right: 1px solid rgba(148, 163, 184, 0.18);
+    }
+
+    .email-campaign-user-list,
+    .email-campaign-selected-list {
+        display: grid;
+        gap: 10px;
+        max-height: 330px;
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+
+    .email-campaign-selected-list {
+        max-height: 292px;
+    }
+
+    .email-campaign-user-item,
+    .email-campaign-selected-item {
+        width: 100%;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 14px;
+        background: #fff;
+        padding: 12px 14px;
+        text-align: left;
+        transition: 0.2s ease;
+    }
+
+    .email-campaign-user-item:hover,
+    .email-campaign-selected-item:hover {
+        border-color: rgba(29, 78, 216, 0.4);
+        box-shadow: 0 10px 24px rgba(29, 78, 216, 0.08);
+        transform: translateY(-1px);
+    }
+
+    .email-campaign-user-item.is-selected {
+        border-color: #1d4ed8;
+        background: #eff6ff;
+        box-shadow: 0 12px 28px rgba(29, 78, 216, 0.12);
+    }
+
+    .email-campaign-user-item strong,
+    .email-campaign-selected-item strong {
+        display: block;
+        color: #10213b;
+        font-size: 0.95rem;
+        font-weight: 800;
+    }
+
+    .email-campaign-user-item span,
+    .email-campaign-selected-item span {
+        display: block;
+        margin-top: 4px;
+        color: #64748b;
+        font-size: 0.84rem;
+        word-break: break-word;
+    }
+
+    .email-campaign-selected-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    .email-campaign-selected-heading strong {
+        color: #10213b;
+        font-size: 0.95rem;
+    }
+
+    .email-campaign-selected-empty,
+    .email-campaign-user-empty {
+        padding: 18px 16px;
+        border: 1px dashed rgba(148, 163, 184, 0.32);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.8);
+        color: #64748b;
+        font-size: 0.9rem;
+        text-align: center;
+    }
+
+    .email-campaign-native-select {
+        display: none !important;
+    }
+
+    .email-campaign-single-shell {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+        gap: 0;
+    }
+
+    .email-campaign-single-browser,
+    .email-campaign-single-preview {
+        padding: 14px;
+    }
+
+    .email-campaign-single-browser {
+        border-right: 1px solid rgba(148, 163, 184, 0.18);
+    }
+
+    .email-campaign-single-search {
+        min-height: 46px;
+        border-radius: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        padding: 0 14px;
+        width: 100%;
+        margin-bottom: 12px;
+    }
+
+    .email-campaign-single-list {
+        display: grid;
+        gap: 10px;
+        max-height: 320px;
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+
+    .email-campaign-single-item {
+        width: 100%;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 14px;
+        background: #fff;
+        padding: 12px 14px;
+        text-align: left;
+        transition: 0.2s ease;
+    }
+
+    .email-campaign-single-item:hover {
+        border-color: rgba(29, 78, 216, 0.4);
+        box-shadow: 0 10px 24px rgba(29, 78, 216, 0.08);
+        transform: translateY(-1px);
+    }
+
+    .email-campaign-single-item.is-selected {
+        border-color: #1d4ed8;
+        background: #eff6ff;
+        box-shadow: 0 12px 28px rgba(29, 78, 216, 0.12);
+    }
+
+    .email-campaign-single-item strong,
+    .email-campaign-single-selected strong {
+        display: block;
+        color: #10213b;
+        font-size: 0.95rem;
+        font-weight: 800;
+    }
+
+    .email-campaign-single-item span,
+    .email-campaign-single-selected span {
+        display: block;
+        margin-top: 4px;
+        color: #64748b;
+        font-size: 0.84rem;
+        word-break: break-word;
+    }
+
+    .email-campaign-single-selected,
+    .email-campaign-single-empty {
+        padding: 16px;
+        border-radius: 14px;
+        background: #fff;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+    }
+
+    .email-campaign-single-empty {
+        border-style: dashed;
+        text-align: center;
+        color: #64748b;
     }
 
     .email-campaign-editor-shell {
@@ -242,6 +462,18 @@
             padding-right: 12px;
         }
 
+        .email-campaign-recipient-toolbar,
+        .email-campaign-recipient-shell,
+        .email-campaign-single-shell {
+            grid-template-columns: 1fr;
+        }
+
+        .email-campaign-user-browser,
+        .email-campaign-single-browser {
+            border-right: 0;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+        }
+
         .email-campaign-editor-shell .cke_contents,
         .email-campaign-editor-shell .cke_contents iframe {
             min-height: 300px !important;
@@ -294,28 +526,92 @@
                 </select>
             </div>
 
-            <div class="email-campaign-field" id="singleUserField">
-                <label for="user_id">Select User</label>
-                <select name="user_id" id="user_id" class="form-select">
-                    <option value="">Choose a user</option>
-                    @foreach ($users as $user)
-                        <option value="{{ $user->id }}" {{ (string) old('user_id', $selectedUser?->id) === (string) $user->id ? 'selected' : '' }}>
-                            {{ $user->full_name }} - {{ $user->email }}
-                        </option>
-                    @endforeach
-                </select>
+            <div class="email-campaign-field">
+                <label for="url">Portal Link</label>
+                <input type="text" name="url" id="url" class="form-control" value="{{ old('url', route('home')) }}" placeholder="{{ route('home') }}">
+                <div class="email-campaign-help">This button link appears inside the email.</div>
             </div>
 
-            <div class="email-campaign-field" id="multipleUsersField">
+            <div class="email-campaign-field email-campaign-field--full" id="multipleUsersField">
                 <label for="user_ids">Select Multiple Users</label>
-                <select name="user_ids[]" id="user_ids" class="form-select email-campaign-multi-select" multiple>
+                <select name="user_ids[]" id="user_ids" class="form-select email-campaign-native-select" multiple>
                     @foreach ($users as $user)
-                        <option value="{{ $user->id }}" {{ collect(old('user_ids', []))->contains($user->id) ? 'selected' : '' }}>
+                        <option
+                            value="{{ $user->id }}"
+                            data-name="{{ $user->full_name }}"
+                            data-email="{{ $user->email }}"
+                            {{ in_array((string) $user->id, $selectedMultipleUsers, true) ? 'selected' : '' }}
+                        >
                             {{ $user->full_name }} - {{ $user->email }}
                         </option>
                     @endforeach
                 </select>
-                <div class="email-campaign-help">Hold Ctrl or Cmd to select multiple users.</div>
+                <div class="email-campaign-recipient-panel">
+                    <div class="email-campaign-recipient-toolbar">
+                        <input
+                            type="text"
+                            id="multipleUserSearch"
+                            class="email-campaign-recipient-search"
+                            placeholder="Search users by name or email"
+                        >
+                        <span class="email-campaign-recipient-count" id="selectedUserCount">0 selected</span>
+                    </div>
+                    <div class="email-campaign-recipient-shell">
+                        <div class="email-campaign-user-browser">
+                            <div class="email-campaign-user-list" id="multipleUserList"></div>
+                        </div>
+                        <div class="email-campaign-selected-preview">
+                            <div class="email-campaign-selected-heading">
+                                <strong>Recipients</strong>
+                            </div>
+                            <input
+                                type="text"
+                                id="selectedUserSearch"
+                                class="email-campaign-recipient-selected-search"
+                                placeholder="Search selected recipients"
+                            >
+                            <div class="email-campaign-help">Click a user to add or remove. Selected users appear here, and the list shows 5 at a time with scroll for the rest.</div>
+                            <div class="email-campaign-selected-list" id="selectedUserList"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="email-campaign-field email-campaign-field--full" id="singleUserField">
+                <label for="user_id">Select User</label>
+                <select name="user_id" id="user_id" class="form-select email-campaign-native-select">
+                    <option value="">Choose a user</option>
+                    @foreach ($users as $user)
+                        <option
+                            value="{{ $user->id }}"
+                            data-name="{{ $user->full_name }}"
+                            data-email="{{ $user->email }}"
+                            {{ (string) $selectedSingleUser === (string) $user->id ? 'selected' : '' }}
+                        >
+                            {{ $user->full_name }} - {{ $user->email }}
+                        </option>
+                    @endforeach
+                </select>
+                <div class="email-campaign-recipient-panel">
+                    <div class="email-campaign-single-shell">
+                        <div class="email-campaign-single-browser">
+                            <input
+                                type="text"
+                                id="singleUserSearch"
+                                class="email-campaign-single-search"
+                                placeholder="Search user by name or email"
+                            >
+                            <div class="email-campaign-single-list" id="singleUserList"></div>
+                        </div>
+                        <div class="email-campaign-single-preview">
+                            <div class="email-campaign-selected-heading">
+                                <strong>Selected User</strong>
+                            </div>
+                            <div class="email-campaign-help">The selected user will appear in this side section.</div>
+                            <div id="singleSelectedUser"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="email-campaign-field">
@@ -324,12 +620,6 @@
             </div>
 
             <div class="email-campaign-field">
-                <label for="url">Portal Link</label>
-                <input type="text" name="url" id="url" class="form-control" value="{{ old('url', route('home')) }}" placeholder="{{ route('home') }}">
-                <div class="email-campaign-help">This button link appears inside the email.</div>
-            </div>
-
-            <div class="email-campaign-field email-campaign-field--full">
                 <label for="description">Short Summary</label>
                 <input type="text" name="description" id="description" class="form-control" value="{{ old('description') }}" placeholder="Optional short summary shown in campaign history">
             </div>
@@ -377,6 +667,16 @@
         const singleUserField = document.getElementById('singleUserField');
         const multipleUsersField = document.getElementById('multipleUsersField');
         const editorState = document.getElementById('editorState');
+        const singleUserSelect = document.getElementById('user_id');
+        const singleUserList = document.getElementById('singleUserList');
+        const singleUserSearch = document.getElementById('singleUserSearch');
+        const singleSelectedUser = document.getElementById('singleSelectedUser');
+        const multipleUserSelect = document.getElementById('user_ids');
+        const multipleUserList = document.getElementById('multipleUserList');
+        const selectedUserList = document.getElementById('selectedUserList');
+        const multipleUserSearch = document.getElementById('multipleUserSearch');
+        const selectedUserSearch = document.getElementById('selectedUserSearch');
+        const selectedUserCount = document.getElementById('selectedUserCount');
 
         const syncRecipientField = function () {
             if (!recipientType || !singleUserField || !multipleUsersField) {
@@ -394,6 +694,219 @@
         if (recipientType) {
             recipientType.addEventListener('change', syncRecipientField);
         }
+
+        const getSingleUserOptions = function () {
+            if (!singleUserSelect) {
+                return [];
+            }
+
+            return Array.from(singleUserSelect.options)
+                .filter(function (option) {
+                    return option.value !== '';
+                })
+                .map(function (option) {
+                    return {
+                        id: option.value,
+                        name: option.dataset.name || '',
+                        email: option.dataset.email || '',
+                        selected: option.selected,
+                    };
+                });
+        };
+
+        const renderSingleSelectedUser = function () {
+            if (!singleSelectedUser || !singleUserSelect) {
+                return;
+            }
+
+            const selected = getSingleUserOptions().find(function (user) {
+                return user.selected;
+            });
+
+            if (!selected) {
+                singleSelectedUser.innerHTML = '<div class="email-campaign-single-empty">No user selected yet.</div>';
+                return;
+            }
+
+            singleSelectedUser.innerHTML = ''
+                + '<button type="button" class="email-campaign-single-selected" data-clear-single-user="true">'
+                + '<strong>' + selected.name + '</strong>'
+                + '<span>' + selected.email + '</span>'
+                + '</button>';
+
+            const clearButton = singleSelectedUser.querySelector('[data-clear-single-user]');
+            if (clearButton) {
+                clearButton.addEventListener('click', function () {
+                    singleUserSelect.value = '';
+                    renderSingleUserList();
+                    renderSingleSelectedUser();
+                });
+            }
+        };
+
+        var renderSingleUserList = function () {
+            if (!singleUserList || !singleUserSelect) {
+                return;
+            }
+
+            const searchTerm = (singleUserSearch ? singleUserSearch.value : '').trim().toLowerCase();
+            const visibleUsers = getSingleUserOptions().filter(function (user) {
+                const haystack = (user.name + ' ' + user.email).toLowerCase();
+                return searchTerm === '' || haystack.includes(searchTerm);
+            });
+
+            if (!visibleUsers.length) {
+                singleUserList.innerHTML = '<div class="email-campaign-single-empty">No users matched your search.</div>';
+                return;
+            }
+
+            singleUserList.innerHTML = visibleUsers.map(function (user) {
+                return ''
+                    + '<button type="button" class="email-campaign-single-item' + (user.selected ? ' is-selected' : '') + '" data-single-user-id="' + user.id + '">'
+                    + '<strong>' + user.name + '</strong>'
+                    + '<span>' + user.email + '</span>'
+                    + '</button>';
+            }).join('');
+
+            Array.from(singleUserList.querySelectorAll('[data-single-user-id]')).forEach(function (button) {
+                button.addEventListener('click', function () {
+                    singleUserSelect.value = button.dataset.singleUserId;
+                    renderSingleUserList();
+                    renderSingleSelectedUser();
+                });
+            });
+        };
+
+        if (singleUserSearch) {
+            singleUserSearch.addEventListener('input', renderSingleUserList);
+        }
+
+        renderSingleUserList();
+        renderSingleSelectedUser();
+
+        const getUserOptions = function () {
+            if (!multipleUserSelect) {
+                return [];
+            }
+
+            return Array.from(multipleUserSelect.options).map(function (option) {
+                return {
+                    id: option.value,
+                    name: option.dataset.name || '',
+                    email: option.dataset.email || '',
+                    selected: option.selected,
+                };
+            });
+        };
+
+        const updateSelectedCount = function (count) {
+            if (!selectedUserCount) {
+                return;
+            }
+
+            selectedUserCount.textContent = count + ' selected';
+        };
+
+        const renderSelectedUsers = function () {
+            if (!selectedUserList || !multipleUserSelect) {
+                return;
+            }
+
+            const searchTerm = (selectedUserSearch ? selectedUserSearch.value : '').trim().toLowerCase();
+            const selectedUsers = getUserOptions().filter(function (user) {
+                if (!user.selected) {
+                    return false;
+                }
+
+                const haystack = (user.name + ' ' + user.email).toLowerCase();
+                return searchTerm === '' || haystack.includes(searchTerm);
+            });
+
+            updateSelectedCount(getUserOptions().filter(function (user) {
+                return user.selected;
+            }).length);
+
+            if (!selectedUsers.length) {
+                selectedUserList.innerHTML = '<div class="email-campaign-selected-empty">No recipients selected yet.</div>';
+                return;
+            }
+
+            selectedUserList.innerHTML = selectedUsers.map(function (user) {
+                return ''
+                    + '<button type="button" class="email-campaign-selected-item" data-user-id="' + user.id + '">'
+                    + '<strong>' + user.name + '</strong>'
+                    + '<span>' + user.email + '</span>'
+                    + '</button>';
+            }).join('');
+
+            Array.from(selectedUserList.querySelectorAll('[data-user-id]')).forEach(function (button) {
+                button.addEventListener('click', function () {
+                    const option = Array.from(multipleUserSelect.options).find(function (item) {
+                        return item.value === button.dataset.userId;
+                    });
+
+                    if (!option) {
+                        return;
+                    }
+
+                    option.selected = false;
+                    renderUserBrowser();
+                    renderSelectedUsers();
+                });
+            });
+        };
+
+        var renderUserBrowser = function () {
+            if (!multipleUserList || !multipleUserSelect) {
+                return;
+            }
+
+            const searchTerm = (multipleUserSearch ? multipleUserSearch.value : '').trim().toLowerCase();
+            const visibleUsers = getUserOptions().filter(function (user) {
+                const haystack = (user.name + ' ' + user.email).toLowerCase();
+                return searchTerm === '' || haystack.includes(searchTerm);
+            });
+
+            if (!visibleUsers.length) {
+                multipleUserList.innerHTML = '<div class="email-campaign-user-empty">No users matched your search.</div>';
+                return;
+            }
+
+            multipleUserList.innerHTML = visibleUsers.map(function (user) {
+                return ''
+                    + '<button type="button" class="email-campaign-user-item' + (user.selected ? ' is-selected' : '') + '" data-user-id="' + user.id + '">'
+                    + '<strong>' + user.name + '</strong>'
+                    + '<span>' + user.email + '</span>'
+                    + '</button>';
+            }).join('');
+
+            Array.from(multipleUserList.querySelectorAll('[data-user-id]')).forEach(function (button) {
+                button.addEventListener('click', function () {
+                    const option = Array.from(multipleUserSelect.options).find(function (item) {
+                        return item.value === button.dataset.userId;
+                    });
+
+                    if (!option) {
+                        return;
+                    }
+
+                    option.selected = !option.selected;
+                    renderUserBrowser();
+                    renderSelectedUsers();
+                });
+            });
+        };
+
+        if (multipleUserSearch) {
+            multipleUserSearch.addEventListener('input', renderUserBrowser);
+        }
+
+        if (selectedUserSearch) {
+            selectedUserSearch.addEventListener('input', renderSelectedUsers);
+        }
+
+        renderUserBrowser();
+        renderSelectedUsers();
 
         const setEditorState = function (message, isError) {
             if (!editorState) {

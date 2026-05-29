@@ -26,7 +26,7 @@ class AppServiceProvider extends ServiceProvider
         Paginator::useBootstrapFive();
         MailConfig::applyFromDatabase();
 
-        View::composer('layouts.app', function ($view) {
+        View::composer('*', function ($view) {
             $view->with('publicShell', PublicSiteData::shell());
         });
     }

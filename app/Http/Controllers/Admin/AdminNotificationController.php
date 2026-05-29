@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\UserNotification;
+use App\Support\AdminEmailCampaignService;
 use App\Support\UserNotificationPublisher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class AdminNotificationController extends Controller
 {
@@ -70,6 +72,7 @@ class AdminNotificationController extends Controller
             'description' => 'nullable|string|max:2000',
             'url' => 'nullable|string|max:255',
             'icon' => 'nullable|string|max:100',
+            'send_email_also' => 'nullable|boolean',
         ]);
 
         $payload = [
@@ -95,8 +98,36 @@ class AdminNotificationController extends Controller
             UserNotificationPublisher::sendToUsers($recipients->pluck('id')->all(), $payload);
         }
 
+        $emailQueued = false;
+
+        if ((bool) ($validated['send_email_also'] ?? false)) {
+            $emailBody = $validated['description'] ?? '';
+            $emailBody = trim($emailBody) !== ''
+                ? nl2br(e($emailBody))
+                : '<p>Please open the portal to view this notification.</p>';
+
+            if (filled($validated['url'] ?? null)) {
+                $emailBody .= '<p style="margin-top:16px;"><a href="' . e($validated['url']) . '">Open Portal</a></p>';
+            }
+
+            AdminEmailCampaignService::queueCampaign([
+                'created_by_admin_id' => Auth::guard('admin')->id(),
+                'recipient_type' => $validated['recipient_type'],
+                'title' => $validated['title'],
+                'description' => $validated['description'] ?: Str::limit(trim(strip_tags($emailBody)), 180),
+                'body_html' => $emailBody,
+                'url' => $validated['url'] ?? route('home'),
+            ], $recipients);
+
+            $emailQueued = true;
+        }
+
         $recipientCount = $recipients->count();
         $message = 'Notification sent to ' . $recipientCount . ' user' . ($recipientCount === 1 ? '' : 's') . '.';
+
+        if ($emailQueued) {
+            $message .= ' Matching email campaign was also queued.';
+        }
 
         return redirect()
             ->route('admin.notifications.create', $validated['recipient_type'] === 'single' ? ['user_id' => $recipients->first()->id] : [])

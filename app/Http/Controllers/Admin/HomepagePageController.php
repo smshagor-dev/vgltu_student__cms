@@ -25,14 +25,12 @@ class HomepagePageController extends Controller
     public function updateAboutUniversity(Request $request)
     {
         $data = $request->validate([
-            'menu_text' => 'required|string|max:100',
             'title' => 'nullable|string|max:255',
             'content' => 'nullable|string',
             'header_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:4096',
         ]);
 
         $settings = $this->settings();
-        $settings->about_university_menu_text = $data['menu_text'];
         $settings->about_university_title = $data['title'] ?? null;
         $settings->about_university_content = $data['content'] ?? null;
 
@@ -61,14 +59,12 @@ class HomepagePageController extends Controller
     public function updateCourses(Request $request)
     {
         $data = $request->validate([
-            'menu_text' => 'required|string|max:100',
             'title' => 'nullable|string|max:255',
             'content' => 'nullable|string',
             'header_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:4096',
         ]);
 
         $settings = $this->settings();
-        $settings->courses_menu_text = $data['menu_text'];
         $settings->courses_title = $data['title'] ?? null;
         $settings->courses_content = $data['content'] ?? null;
 

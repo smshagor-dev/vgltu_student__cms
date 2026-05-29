@@ -52,7 +52,10 @@ class SendVisaExpiryNotifications extends Command
                         }
                     }
 
-                    if ($daysUntilExpiry <= -10 && $record->visa_overdue_10_sent_at === null) {
+                    $isOverdueByTenDays = $daysUntilExpiry <= -10;
+                    $lastOverdueReminderAt = $record->visa_overdue_10_sent_at?->copy()?->startOfDay();
+
+                    if ($isOverdueByTenDays && ($lastOverdueReminderAt === null || $lastOverdueReminderAt->lt($today))) {
                         $title = 'Your visa expaired update info';
                         $description = 'Your visa expiry date was ' . $expiryDate->format('d M Y') . '. Please update your visa information immediately.';
 
