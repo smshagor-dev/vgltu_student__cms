@@ -533,24 +533,6 @@
     </div>
 </section>
 
-@if(session('message'))
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            Swal.fire({
-                title: "Registration Successful!",
-                text: "{{ session('message') }}",
-                icon: "success",
-                confirmButtonText: "OK"
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = "{{ route('login') }}";
-                }
-            });
-        });
-    </script>
-@endif
-
 <script>
     function toggleOtherDepartment() {
         const departmentSelect = document.getElementById('department');

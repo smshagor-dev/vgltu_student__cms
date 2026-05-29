@@ -1670,6 +1670,9 @@
 
     @endauth
 
+    @if (session('login_success') || session('registration_success') || (old('login_modal') && ($errors->has('email') || $errors->has('password'))))
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    @endif
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const browserNotificationToggle = document.getElementById('toggleBrowserNotifications');
@@ -2072,6 +2075,39 @@
                 const loginModalElement = document.getElementById('loginModal');
                 if (loginModalElement && window.bootstrap) {
                     window.bootstrap.Modal.getOrCreateInstance(loginModalElement).show();
+                }
+            @endif
+
+            @if (session('login_success'))
+                if (window.Swal) {
+                    window.Swal.fire({
+                        icon: 'success',
+                        title: 'Login Successful',
+                        text: @json(session('login_success')),
+                        confirmButtonColor: '#bb3e71'
+                    });
+                }
+            @endif
+
+            @if (session('registration_success'))
+                if (window.Swal) {
+                    window.Swal.fire({
+                        icon: 'success',
+                        title: 'Registration Successful',
+                        text: @json(session('registration_success')),
+                        confirmButtonColor: '#bb3e71'
+                    });
+                }
+            @endif
+
+            @if (old('login_modal') && ($errors->has('email') || $errors->has('password')))
+                if (window.Swal) {
+                    window.Swal.fire({
+                        icon: 'error',
+                        title: 'Login Failed',
+                        text: @json($errors->first('email') ?: $errors->first('password')),
+                        confirmButtonColor: '#bb3e71'
+                    });
                 }
             @endif
         });

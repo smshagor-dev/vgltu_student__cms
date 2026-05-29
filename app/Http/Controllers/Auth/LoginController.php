@@ -58,11 +58,16 @@ class LoginController extends Controller
 
     protected function authenticated(Request $request, $user)
     {
+        if ($request->filled('login_modal')) {
+            $request->session()->flash('login_success', 'Login successful. Welcome back.');
+        }
+
         StudentDataStatus::ensureCompletionReminder($user);
 
         if (! $user->studentsData()->exists()) {
             return redirect()
                 ->route('students_data.create')
+                ->with('login_success', 'Login successful. Please complete your student data.')
                 ->with('warning', 'Your passport, visa, and green card information is missing. Please update your student data.');
         }
     }

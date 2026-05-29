@@ -48,8 +48,10 @@ class RegisterController extends Controller
 
     protected function registered(Request $request, $user)
     {
-        // After registration, show a message that the account is pending approval
-        return redirect('/login')->with('warning', 'Your account is pending approval by the admin.');
+        return redirect()->route('welcome')->with(
+            'registration_success',
+            'Registration Successful, please wait for approval and confirmation email.'
+        );
     }
     
 
@@ -100,10 +102,10 @@ class RegisterController extends Controller
         UserEmailService::sendRegistrationPending($user, (string) $request->password);
 
         // Create the user with the pending approval status
-         session()->flash('message', 'Your registration is pending approval. Please wait for admin approval.');
-
-        // Redirect to login page with a message about pending approval
-        return redirect()->route('login')->with('warning', 'Your account is pending approval by the admin.');
+        return redirect()->route('welcome')->with(
+            'registration_success',
+            'Registration Successful, please wait for approval and confirmation email.'
+        );
     }      
 
     /**
