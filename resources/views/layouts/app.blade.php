@@ -904,7 +904,7 @@
             display: none;
         }
 
-        @media (max-width: 575px) {
+        @media (max-width: 1199.98px) {
             body.edu-body {
                 padding-bottom: 92px;
             }
@@ -1120,7 +1120,7 @@
             }
         }
 
-        @media (max-width: 991.98px) {
+        @media (max-width: 1199.98px) {
             .edu-toggler--desktop {
                 display: none !important;
             }
@@ -1664,7 +1664,7 @@
 
     @endauth
 
-    @if (session('login_success') || session('registration_success') || (old('login_modal') && ($errors->has('email') || $errors->has('password'))))
+    @if ($authUser || session('login_success') || session('registration_success') || (old('login_modal') && ($errors->has('email') || $errors->has('password'))))
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     @endif
         <script>
@@ -1679,6 +1679,7 @@
             const desktopNotificationTabContent = document.getElementById('desktopNotificationTabContent');
             const mobileNotificationTabContent = document.getElementById('mobileNotificationTabContent');
             const webPushPublicKey = @json($webPushPublicKey);
+            const authUserId = @json($authUser?->id);
             const canPersistPushSubscription = @json((bool) $authUser);
             let unreadBrowserNotifications = @json($unreadBrowserNotifications);
             let browserNotificationsEnabled = @json($browserNotificationsEnabled);
@@ -1883,6 +1884,22 @@
                 return outputArray;
             };
 
+            const shouldShowPushPermissionPrompt = function () {
+                if (!canPersistPushSubscription || !authUserId || !window.Swal || !webPushPublicKey) {
+                    return false;
+                }
+
+                if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+                    return false;
+                }
+
+                if (Notification.permission !== 'default' || browserNotificationsEnabled) {
+                    return false;
+                }
+                
+                return true;
+            };
+
             const unsubscribeFromPush = async function (subscription) {
                 if (subscription) {
                     await subscription.unsubscribe();
@@ -1971,6 +1988,49 @@
                     }
                 } catch (error) {
                     console.error('Unable to request push permission after registration.', error);
+                }
+            };
+
+            const showPushPermissionPrompt = async function () {
+                if (!shouldShowPushPermissionPrompt()) {
+                    return;
+                }
+
+                const result = await window.Swal.fire({
+                    title: 'Enable Browser Notifications?',
+                    text: 'Get important updates, reminders, and alerts directly from the browser.',
+                    icon: 'info',
+                    showCancelButton: true,
+                    confirmButtonText: 'Enable Now',
+                    cancelButtonText: 'Skip for This Time',
+                    confirmButtonColor: '#bb3e71',
+                    cancelButtonColor: '#6c757d',
+                });
+
+                if (!result.isConfirmed) {
+                    return;
+                }
+
+                try {
+                    const permission = Notification.permission === 'granted'
+                        ? 'granted'
+                        : await Notification.requestPermission();
+
+                    if (permission !== 'granted') {
+                        if (permission === 'denied') {
+                            await window.Swal.fire({
+                                title: 'Notifications Blocked',
+                                text: 'Please allow notifications from your browser settings if you want to receive alerts later.',
+                                icon: 'warning',
+                                confirmButtonColor: '#bb3e71',
+                            });
+                        }
+                        return;
+                    }
+
+                    await ensureAutoPushSubscription();
+                } catch (error) {
+                    console.error('Unable to show browser notification prompt.', error);
                 }
             };
 
@@ -2157,7 +2217,11 @@
                         title: 'Login Successful',
                         text: @json(session('login_success')),
                         confirmButtonColor: '#bb3e71'
+                    }).then(function () {
+                        return showPushPermissionPrompt();
                     });
+                } else {
+                    showPushPermissionPrompt();
                 }
             @endif
 
@@ -2175,6 +2239,14 @@
                     promptForPushPermissionAfterRegistration();
                 }
             @endif
+
+            @auth
+                if (!@json((bool) session('login_success')) && !@json((bool) session('registration_success'))) {
+                    window.setTimeout(function () {
+                        showPushPermissionPrompt();
+                    }, 900);
+                }
+            @endauth
 
             @if (old('login_modal') && ($errors->has('email') || $errors->has('password')))
                 if (window.Swal) {
