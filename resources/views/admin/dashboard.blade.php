@@ -7,41 +7,6 @@
         gap: 24px;
     }
 
-    .dashboard-hero {
-        position: relative;
-        overflow: hidden;
-        padding: 32px;
-        border-radius: 28px;
-        background:
-            radial-gradient(circle at top right, rgba(56, 189, 248, 0.28), transparent 28%),
-            linear-gradient(135deg, #0f172a 0%, #172554 48%, #0f766e 100%);
-        color: #fff;
-        box-shadow: 0 28px 60px rgba(15, 23, 42, 0.18);
-    }
-
-    .dashboard-hero::after {
-        content: "";
-        position: absolute;
-        inset: auto -40px -80px auto;
-        width: 220px;
-        height: 220px;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.08);
-    }
-
-    .dashboard-hero h2 {
-        color: #fff;
-        font-size: 2rem;
-        margin-bottom: 10px;
-    }
-
-    .dashboard-hero p {
-        max-width: 720px;
-        margin: 0;
-        color: rgba(255, 255, 255, 0.8);
-        line-height: 1.7;
-    }
-
     .dashboard-grid {
         display: grid;
         gap: 18px;
@@ -256,18 +221,10 @@
             grid-template-columns: 1fr;
         }
 
-        .dashboard-hero {
-            padding: 24px;
-        }
     }
 </style>
 
 <div class="dashboard-page">
-    <section class="dashboard-hero">
-        <h2>Admin operations at a glance</h2>
-        <p>Track student records, pending approvals, medical completion, complaints, and academic distribution from one streamlined dashboard without changing any workflow.</p>
-    </section>
-
     <section class="dashboard-panel">
         <div class="dashboard-panel__header">
             <div>

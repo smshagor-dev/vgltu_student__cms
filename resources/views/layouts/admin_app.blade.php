@@ -270,6 +270,7 @@
         }
 
         .topbar {
+            position: relative;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -281,6 +282,8 @@
             background: rgba(255, 255, 255, 0.72);
             backdrop-filter: blur(20px);
             box-shadow: var(--admin-shadow);
+            overflow: visible;
+            z-index: 1050;
         }
 
         .topbar-start {
@@ -396,6 +399,12 @@
             border-radius: 18px;
             padding: 10px;
             box-shadow: 0 22px 50px rgba(15, 23, 42, 0.16);
+            z-index: 1080;
+        }
+
+        .topbar-actions .dropdown {
+            position: relative;
+            z-index: 1081;
         }
 
         .dropdown-item {
@@ -1175,6 +1184,21 @@
                     <a href="{{ route('admin.contact-messages.index') }}" class="{{ request()->routeIs('admin.contact-messages.*') ? 'is-active' : '' }}" data-menu-item><i class="fas fa-inbox"></i> View Messages</a>
                 </div>
             </div>
+
+            <div class="nav-group {{ request()->routeIs('admin.complaints.*') ? 'is-open' : '' }}" data-nav-group>
+                <button type="button" class="nav-group-toggle" data-nav-toggle>
+                    <span class="nav-group-title">
+                        <span class="nav-icon"><i class="fas fa-triangle-exclamation"></i></span>
+                        <span>Complaints</span>
+                    </span>
+                    <i class="fas fa-chevron-down chevron"></i>
+                </button>
+                <div class="nav-submenu">
+                    <a href="{{ route('admin.complaints.index') }}" class="{{ request()->routeIs('admin.complaints.index') ? 'is-active' : '' }}" data-menu-item><i class="fas fa-list"></i> Pending Complaints</a>
+                    <a href="{{ route('admin.complaints.inProgress') }}" class="{{ request()->routeIs('admin.complaints.inProgress') ? 'is-active' : '' }}" data-menu-item><i class="fas fa-spinner"></i> In Progress</a>
+                    <a href="{{ route('admin.complaints.solved') }}" class="{{ request()->routeIs('admin.complaints.solved') ? 'is-active' : '' }}" data-menu-item><i class="fas fa-circle-check"></i> Solved</a>
+                </div>
+            </div>
         </div>
 
         <div class="sidebar-section" data-menu-section>
@@ -1309,7 +1333,9 @@
                         <i class="fas fa-chevron-down text-muted"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{{ route('welcome') }}" target="_blank" rel="noopener noreferrer"><i class="fas fa-globe"></i> Go to Frontend</a></li>
                         <li><a class="dropdown-item" href="{{ route('admin.profile.edit') }}"><i class="fas fa-user-pen"></i> Edit Profile</a></li>
+                        <li><a class="dropdown-item" href="{{ route('admin.profile.edit') }}#two-factor"><i class="fas fa-shield-alt"></i> Two-Factor Security</a></li>
                         <li><a class="dropdown-item" href="{{ route('admin.create') }}"><i class="fas fa-user-plus"></i> Create Admin</a></li>
                         <li><a class="dropdown-item" href="{{ route('admin.index') }}"><i class="fas fa-users"></i> Admin List</a></li>
                         <li><hr class="dropdown-divider"></li>

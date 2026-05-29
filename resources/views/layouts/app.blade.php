@@ -223,6 +223,11 @@
             display: flex;
             align-items: center;
             gap: 12px;
+            transform: translateX(-5px);
+        }
+
+        .edu-header-tools--auth .edu-desktop-tool {
+            transform: translateX(-10px);
         }
 
         .edu-auth-btn {
@@ -1023,6 +1028,7 @@
 
             .edu-mobile-header .edu-notification-btn {
                 display: inline-flex !important;
+                transform: translateX(-10px);
             }
 
             .edu-mobile-header .edu-notification-count {
@@ -1137,7 +1143,7 @@
                     <a href="{{ $settings['class_routine_link'] ?? url('/class_routine') }}">
                         <i class="far fa-calendar-alt"></i>{{ $settings['class_routine_text'] ?? 'Class Routine' }}
                     </a>
-                    <a href="{{ route('university_profile') }}">
+                    <a href="{{ url('/university-student-profile') }}">
                         <i class="fas fa-user-shield"></i>{{ $settings['university_profile_text'] ?? 'University Profile' }}
                     </a>
                 </div>
@@ -1147,7 +1153,7 @@
         <header class="edu-header sticky-top">
             <div class="container">
                 <nav class="navbar navbar-expand-xl edu-navbar">
-                    <a class="navbar-brand edu-brand" href="{{ route('welcome') }}">
+                    <a class="navbar-brand edu-brand" href="{{ route('welcome') }}" style="transform: translateX(5px);">
                         <img src="{{ $logoUrl }}" alt="{{ $siteName }}">
                         <span>{{ $siteName }}</span>
                     </a>
@@ -1166,7 +1172,7 @@
                     </button>
 
                     @guest
-                        <button class="navbar-toggler edu-toggler edu-toggler--mobile" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileMenuDrawer" aria-controls="mobileMenuDrawer" aria-label="{{ __('Open menu') }}" style="margin-right: 5px;">
+                        <button class="navbar-toggler edu-toggler edu-toggler--mobile" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileMenuDrawer" aria-controls="mobileMenuDrawer" aria-label="{{ __('Open menu') }}" style="transform: translateX(-10px);">
                             <span class="navbar-toggler-icon"></span>
                         </button>
                     @endguest
@@ -1232,7 +1238,7 @@
                             @endauth
                         </ul>
 
-                        <div class="edu-header-tools">
+                        <div class="edu-header-tools{{ $authUser ? ' edu-header-tools--auth' : '' }}">
                             @guest
                                 <div class="edu-auth-actions">
                                     <button type="button" class="btn edu-auth-btn edu-auth-btn--secondary" data-bs-toggle="modal" data-bs-target="#loginModal">

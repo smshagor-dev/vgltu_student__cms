@@ -22,6 +22,7 @@ use App\Http\Controllers\UserFieldDataController;
 use App\Http\Controllers\AdminFieldDataController;
 use App\Http\Controllers\FormSubmissionController;
 use App\Http\Controllers\AdminProfileController;
+use App\Http\Controllers\AdminTwoFactorController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\UploadController;
 use App\Http\Controllers\StudentsDataController;
@@ -166,8 +167,6 @@ Route::match(['GET', 'POST'], '/university-student-profile/proxy', [VgltuLoginPa
 Route::match(['GET', 'POST'], '/university-student-profile/proxy/{path}', [VgltuLoginPanelController::class, 'proxy'])
     ->where('path', '.*')
     ->name('university-student-profile.proxy');
-Route::redirect('/login-panel', '/university-student-profile');
-Route::redirect('/university_profile', '/university-student-profile')->name('university_profile');
 
 
 //Admin Section
@@ -175,18 +174,23 @@ Route::redirect('/university_profile', '/university-student-profile')->name('uni
 Route::prefix('admin')->group(function () {
     Route::get('login', [AdminAuthController::class, 'showLoginForm'])->name('admin.login');
     Route::post('login', [AdminAuthController::class, 'login'])->name('admin.login.submit');
-    Route::post('/admin/logout', function () {Auth::guard('admin')->logout();return redirect('/admin/login');})->name('admin.logout');
+    Route::post('logout', [AdminAuthController::class, 'logout'])->name('admin.logout');
+    Route::get('two-factor/challenge', [AdminTwoFactorController::class, 'showChallenge'])->name('admin.two-factor.challenge');
+    Route::post('two-factor/challenge', [AdminTwoFactorController::class, 'verifyChallenge'])->name('admin.two-factor.verify');
+    Route::get('two-factor/setup', [AdminTwoFactorController::class, 'showSetup'])->name('admin.two-factor.setup');
+    Route::post('two-factor/setup', [AdminTwoFactorController::class, 'confirmSetup'])->name('admin.two-factor.confirm');
+    Route::post('two-factor/cancel', [AdminTwoFactorController::class, 'cancel'])->name('admin.two-factor.cancel');
 
     Route::get('dashboard', function () {
         return view('admin.dashboard');
     })->name('admin.dashboard')->middleware('auth:admin');
 });
 
-Route::prefix('admin')->middleware('auth:admin')->group(function () {
+Route::prefix('admin')->middleware('admin')->group(function () {
     Route::get('dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
 });
 
-Route::middleware('auth:admin')->group(function () {
+Route::middleware('admin')->group(function () {
 
 
 // Route to display the list of users based on selected category (nationality, religion, department, etc.)
@@ -268,12 +272,12 @@ Route::prefix('admin/homepage')->name('admin.homepage.')->group(function () {
     Route::resource('destinations', AdminStudyDestinationController::class)->except(['show']);
 });
 
-Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function () {
+Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::get('/user-edit-permissions', [UserEditPermissionController::class, 'edit'])->name('user-edit-permissions.edit');
     Route::put('/user-edit-permissions', [UserEditPermissionController::class, 'update'])->name('user-edit-permissions.update');
 });
 
-Route::middleware(['auth:admin'])->prefix('admin/settings')->name('admin.smtp.')->group(function () {
+Route::middleware(['admin'])->prefix('admin/settings')->name('admin.smtp.')->group(function () {
     Route::get('/smtp', [SmtpSettingController::class, 'edit'])->name('edit');
     Route::put('/smtp', [SmtpSettingController::class, 'update'])->name('update');
 });
@@ -310,11 +314,11 @@ Route::get('get-categories/{typeId}', [CategoryController::class, 'getCategories
 Route::get('/get-subcategories/{categoryId}', [CategoryController::class, 'getSubCategories']); 
 
 // Admin Routes for create fields
-Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::resource('custom-fields', AdminCustomFieldController::class);
 });
 
-Route::prefix('admin')->group(function () {
+Route::prefix('admin')->middleware('admin')->group(function () {
     Route::get('/user-custom-data', [AdminFieldDataController::class, 'index'])->name('admin.user-custom-data.index');
     Route::delete('/user-custom-data/{userId}/{fieldId}', [AdminFieldDataController::class, 'destroyFieldData'])->name('admin.user-custom-data.destroy-field-data');
     Route::post('/user-custom-data/status/{userId}', [AdminFieldDataController::class, 'changeStatus'])->name('admin.user-custom-data.change-status');
@@ -328,14 +332,14 @@ Route::prefix('admin')->group(function () {
 
 
 
-Route::prefix('admin/custom-fields/options')->group(function () {
+Route::prefix('admin/custom-fields/options')->middleware('admin')->group(function () {
     Route::get('{option}/edit', [CustomFieldOptionController::class, 'edit'])->name('admin.custom-fields.options.edit');
     Route::post('{option}', [CustomFieldOptionController::class, 'update'])->name('admin.custom-fields.options.update');
     Route::delete('{option}', [CustomFieldOptionController::class, 'destroy'])->name('admin.custom-fields.options.destroy');
 });
 
 // In routes/web.php
-Route::prefix('admin')->name('admin.')->middleware('auth')->group(function() {
+Route::prefix('admin')->name('admin.')->middleware('admin')->group(function() {
     Route::get('form-submissions', [FormSubmissionController::class, 'index'])
          ->name('form-submissions.index');
 
@@ -346,14 +350,23 @@ Route::get('form-submissions/view-users/{fieldId}', [FormSubmissionController::c
 });
 
 // In routes/web.php
-Route::get('admin/form-submissions/view-option/{field_id}/{option}', [FormSubmissionController::class, 'viewOptionUsers'])->name('admin.form-submissions.view-option');
+Route::get('admin/form-submissions/view-option/{field_id}/{option}', [FormSubmissionController::class, 'viewOptionUsers'])
+    ->middleware('admin')
+    ->name('admin.form-submissions.view-option');
 
-Route::get('/admin/form-submissions/view-users/{field_id}', [FormSubmissionController::class, 'viewUsers'])->name('admin.form-submissions.view-users-legacy');
+Route::get('/admin/form-submissions/view-users/{field_id}', [FormSubmissionController::class, 'viewUsers'])
+    ->middleware('admin')
+    ->name('admin.form-submissions.view-users-legacy');
 
-Route::post('/user-custom-data/{userId}/{valueId}/status', [FormSubmissionController::class, 'changeStatus'])->name('admin.user-from-submission-data.update-value-status-legacy');
-Route::delete('/user-custom-data/{userId}/{valueId}/delete', [FormSubmissionController::class, 'destroyFieldData'])->name('admin.user-from-submission-data.delete-value-data');
+Route::post('/user-custom-data/{userId}/{valueId}/status', [FormSubmissionController::class, 'changeStatus'])
+    ->middleware('admin')
+    ->name('admin.user-from-submission-data.update-value-status-legacy');
+Route::delete('/user-custom-data/{userId}/{valueId}/delete', [FormSubmissionController::class, 'destroyFieldData'])
+    ->middleware('admin')
+    ->name('admin.user-from-submission-data.delete-value-data');
 
 Route::post('/admin/user-from-submission-data/update-value-status/{userId}/{valueId}', [FormSubmissionController::class, 'changeStatus'])
+    ->middleware('admin')
     ->name('admin.user-from-submission-data.update-value-status');
 
 
@@ -363,13 +376,16 @@ Route::post('/admin/user-from-submission-data/update-value-status/{userId}/{valu
 
 
 
-Route::middleware(['auth:admin'])->group(function () {
+Route::middleware(['admin'])->group(function () {
     Route::get('/admin/profile', [AdminProfileController::class, 'edit'])->name('admin.profile.edit');
     Route::post('/admin/profile', [AdminProfileController::class, 'update'])->name('admin.profile.update');
     Route::post('/admin/profile/reset-password/{id}', [AdminProfileController::class, 'resetPassword'])->name('admin.profile.reset_password');
+    Route::post('/admin/profile/two-factor/enable', [AdminTwoFactorController::class, 'enableFromProfile'])->name('admin.profile.two-factor.enable');
+    Route::post('/admin/profile/two-factor/disable', [AdminTwoFactorController::class, 'disable'])->name('admin.profile.two-factor.disable');
+    Route::post('/admin/profile/two-factor/recovery-codes', [AdminTwoFactorController::class, 'regenerateRecoveryCodes'])->name('admin.profile.two-factor.recovery-codes');
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware('admin')->group(function () {
     Route::get('/admin/create', [AdminController::class, 'create'])->name('admin.create');
     Route::post('/admin/store', [AdminController::class, 'store'])->name('admin.store');
     Route::get('/admins', [AdminController::class, 'index'])->name('admin.index');
@@ -391,21 +407,21 @@ Route::prefix('admin')->group(function () {
 });
 
 Route::post('/upload/media', [UploadController::class, 'storeMedia'])->name('upload.media');
-Route::post('/admin/upload/storeMedia', [UploadController::class, 'storeMedia'])->name('admin.upload.storeMedia');
+Route::post('/admin/upload/storeMedia', [UploadController::class, 'storeMedia'])->middleware('admin')->name('admin.upload.storeMedia');
 // Inside routes/web.php
 
 // Inside routes/web.php
 Route::post('/media/upload', [UploadController::class, 'storeMedia'])->name('media.upload');
 
 
-Route::prefix('admin')->name('admin.')->group(function () {
+Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::get('/studentsdata', [AdminStudentController::class, 'index'])->name('studentsdata.index');
     Route::get('/studentsdata/{id}/edit', [AdminStudentController::class, 'edit'])->name('studentsdata.edit');
     Route::put('/studentsdata/{id}', [AdminStudentController::class, 'update'])->name('studentsdata.update');
     Route::delete('/studentsdata/{id}', [AdminStudentController::class, 'destroy'])->name('studentsdata.delete');
 });
 
-Route::prefix('admin')->name('admin.')->middleware(['auth:admin'])->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function () {
     Route::get('/complaints', [ComplaintController::class, 'adminIndex'])->name('complaints.index');
     Route::get('/complaints/in-progress', [ComplaintController::class, 'inProgress'])->name('complaints.inProgress');
     Route::get('/complaints/solved', [ComplaintController::class, 'solved'])->name('complaints.solved');
@@ -426,8 +442,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:admin'])->group(functi
     Route::delete('/contact-messages/{contactMessage}', [ContactMessageController::class, 'destroy'])->name('contact-messages.destroy');
 });
 
-Route::get('admin/dashboard/students-by-floor', [StudentByReligionController::class, 'index'])->name('students.by.religion');
-Route::get('admin/dashboard/students-by-floor/pdf', [StudentByReligionController::class, 'downloadPdf'])->name('students.by.religion.pdf');
-Route::get('admin/dashboard/students-by-block/{block}', [StudentByReligionController::class, 'showBlock'])->name('students.by.block');
+Route::get('admin/dashboard/students-by-floor', [StudentByReligionController::class, 'index'])->middleware('admin')->name('students.by.religion');
+Route::get('admin/dashboard/students-by-floor/pdf', [StudentByReligionController::class, 'downloadPdf'])->middleware('admin')->name('students.by.religion.pdf');
+Route::get('admin/dashboard/students-by-block/{block}', [StudentByReligionController::class, 'showBlock'])->middleware('admin')->name('students.by.block');
 
 });

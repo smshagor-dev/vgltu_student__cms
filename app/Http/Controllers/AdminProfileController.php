@@ -2,25 +2,54 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Admin;
+use App\Support\GoogleTwoFactorService;
+use App\Support\ImageCompressor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use App\Models\Admin;
-use Illuminate\Support\Str;
-use App\Support\ImageCompressor;
-
 
 class AdminProfileController extends Controller
 {
+    public function __construct(
+        private readonly GoogleTwoFactorService $twoFactor,
+    ) {
+    }
+
     public function edit()
     {
-        $admin = Auth::guard('admin')->user(); // Get the currently authenticated admin
-        return view('admin.profile.edit', compact('admin'));
+        /** @var Admin $admin */
+        $admin = Auth::guard('admin')->user();
+
+        $setupSecret = null;
+        $setupQrCodeUrl = null;
+        $setupOtpAuthUri = null;
+
+        if (! $admin->hasTwoFactorEnabled()) {
+            $setupSecret = session('admin_profile_two_factor_secret');
+
+            if (! $setupSecret) {
+                $setupSecret = $this->twoFactor->generateSecret();
+                session(['admin_profile_two_factor_secret' => $setupSecret]);
+            }
+
+            $setupOtpAuthUri = $this->twoFactor->buildOtpAuthUri($admin, $setupSecret);
+            $setupQrCodeUrl = $this->twoFactor->buildQrCodeUrl($setupOtpAuthUri);
+        }
+
+        return view('admin.profile.edit', [
+            'admin' => $admin,
+            'setupSecret' => $setupSecret,
+            'setupQrCodeUrl' => $setupQrCodeUrl,
+            'setupOtpAuthUri' => $setupOtpAuthUri,
+            'plainRecoveryCodes' => session('admin_two_factor_recovery_codes_plain', []),
+        ]);
     }
 
     public function update(Request $request)
     {
-        $admin = Auth::user(); // Get the currently authenticated admin
+        /** @var Admin $admin */
+        $admin = Auth::guard('admin')->user();
 
         $request->validate([
             'name' => 'required|string|max:255',
@@ -47,7 +76,7 @@ class AdminProfileController extends Controller
 
         return redirect()->route('admin.profile.edit')->with('success', 'Profile updated successfully.');
     }
-    
+
     public function resetPassword($id)
     {
         $admin = Admin::findOrFail($id);

@@ -20,7 +20,7 @@ class WebsiteSettingController extends Controller
             'class_routine_text' => 'Class Routine',
             'class_routine_link' => '/class_routine',
             'university_profile_text' => 'University Profile',
-            'university_profile_link' => '/university_profile',
+            'university_profile_link' => '/university-student-profile',
             'footer_social_links' => [],
         ]);
 

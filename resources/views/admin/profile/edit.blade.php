@@ -12,6 +12,10 @@
             <div class="alert alert-success">{{ session('success') }}</div>
         @endif
 
+        @if ($errors->has('two_factor'))
+            <div class="alert alert-danger">{{ $errors->first('two_factor') }}</div>
+        @endif
+
         <div class="admin-grid-2">
             <div class="admin-panel">
                 <div class="admin-toolbar">
@@ -98,6 +102,97 @@
                         <button type="submit" class="btn btn-primary">Update Profile</button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <div class="admin-grid-2 mt-4" id="two-factor">
+            <div class="admin-panel">
+                <div class="admin-toolbar">
+                    <div class="admin-toolbar__title">
+                        <h3>Google Authenticator 2FA</h3>
+                        <p>Protect admin access with time-based one-time codes.</p>
+                    </div>
+                </div>
+
+                @if ($admin->hasTwoFactorEnabled())
+                    <div class="alert alert-success">Two-factor authentication is enabled for this admin account.</div>
+                    <div class="admin-kv mb-4">
+                        <div class="admin-kv-item"><span>Status</span><strong>Enabled</strong></div>
+                        <div class="admin-kv-item"><span>Activated</span><strong>{{ optional($admin->two_factor_confirmed_at)->format('d M Y, h:i A') }}</strong></div>
+                    </div>
+
+                    <form action="{{ route('admin.profile.two-factor.disable') }}" method="POST" class="mb-4">
+                        @csrf
+                        <div class="mb-3">
+                            <label for="disable_current_password" class="form-label">Current Password</label>
+                            <input type="password" id="disable_current_password" name="current_password" class="form-control @error('disable_current_password') is-invalid @enderror" placeholder="Enter current password" required>
+                            @error('disable_current_password')
+                                <span class="text-danger">{{ $message }}</span>
+                            @enderror
+                        </div>
+                        <button type="submit" class="btn btn-outline-danger">Disable 2FA</button>
+                    </form>
+
+                    <form action="{{ route('admin.profile.two-factor.recovery-codes') }}" method="POST">
+                        @csrf
+                        <div class="mb-3">
+                            <label for="recovery_current_password" class="form-label">Current Password</label>
+                            <input type="password" id="recovery_current_password" name="current_password" class="form-control @error('current_password') is-invalid @enderror" placeholder="Enter current password" required>
+                            @error('current_password')
+                                <span class="text-danger">{{ $message }}</span>
+                            @enderror
+                        </div>
+                        <button type="submit" class="btn btn-primary">Regenerate Recovery Codes</button>
+                    </form>
+                @else
+                    <div class="alert alert-warning">Two-factor authentication is not enabled yet. Scan the QR code and verify one code to turn it on.</div>
+                    <form action="{{ route('admin.profile.two-factor.enable') }}" method="POST">
+                        @csrf
+                        <div class="mb-3 text-center">
+                            @if ($setupQrCodeUrl)
+                                <img src="{{ $setupQrCodeUrl }}" alt="2FA QR Code" style="width: min(240px, 100%); background: #fff; padding: 10px; border-radius: 18px;">
+                            @endif
+                        </div>
+                        @if ($setupSecret)
+                            <div class="mb-3">
+                                <label class="form-label">Manual Setup Key</label>
+                                <div class="form-control" style="min-height:auto; font-weight:700; letter-spacing:0.08em; word-break: break-all;">{{ $setupSecret }}</div>
+                            </div>
+                        @endif
+                        <div class="mb-3">
+                            <label for="two_factor_code" class="form-label">Authenticator Code</label>
+                            <input type="text" id="two_factor_code" name="code" class="form-control @error('code') is-invalid @enderror" placeholder="Enter 6-digit code" required>
+                            @error('code')
+                                <span class="text-danger">{{ $message }}</span>
+                            @enderror
+                        </div>
+                        <button type="submit" class="btn btn-primary">Enable Google Authenticator</button>
+                    </form>
+                @endif
+            </div>
+
+            <div class="admin-panel">
+                <div class="admin-toolbar">
+                    <div class="admin-toolbar__title">
+                        <h3>Recovery Codes</h3>
+                        <p>Store these in a safe place. Each code can be used once if you lose your authenticator device.</p>
+                    </div>
+                </div>
+
+                @if (!empty($plainRecoveryCodes))
+                    <div class="alert alert-info">These recovery codes are shown only now. Save them before leaving this page.</div>
+                    <div class="row g-3">
+                        @foreach ($plainRecoveryCodes as $recoveryCode)
+                            <div class="col-md-6">
+                                <div class="form-control" style="min-height:auto; font-weight:700; text-align:center; letter-spacing:0.08em;">{{ $recoveryCode }}</div>
+                            </div>
+                        @endforeach
+                    </div>
+                @elseif ($admin->hasTwoFactorEnabled())
+                    <div class="admin-empty">Recovery codes are hidden for security. Use the regenerate button to create a new set.</div>
+                @else
+                    <div class="admin-empty">Recovery codes will appear here after you enable Google Authenticator 2FA.</div>
+                @endif
             </div>
         </div>
     </section>

@@ -2,63 +2,65 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Admin;
-use Illuminate\Foundation\Auth\AuthenticatesUsers;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
 class AdminAuthController extends Controller
 {
-    use AuthenticatesUsers;
+    public function __construct()
+    {
+        $this->middleware(function (Request $request, \Closure $next) {
+            if (Auth::guard('admin')->check()) {
+                return redirect()->route('admin.dashboard');
+            }
+
+            return $next($request);
+        })->only(['showLoginForm', 'login']);
+    }
     
     public function showLoginForm()
     {
         return view('admin.login');
     }
 
-
-     /**
-     * The user has been authenticated.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  mixed  $user
-     * @return mixed
-     */
-    protected function authenticated(Request $request, $user)
+    public function login(Request $request)
     {
-        // Check if the logged-in user is an admin (using the admin guard)
-        if (Auth::guard('admin')->check()) {
-            return redirect()->route('admin.dashboard');
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required|string',
+            'remember' => 'nullable',
+        ]);
+
+        /** @var Admin|null $admin */
+        $admin = Admin::where('email', $request->email)->first();
+
+        if (! $admin || ! Hash::check((string) $request->password, $admin->password)) {
+            return back()
+                ->withErrors(['email' => 'The provided admin credentials are incorrect.'])
+                ->withInput($request->only('email'));
         }
-    
-        // If the logged-in user is not an admin, log them out and redirect to login page
-        Auth::logout();  // Logs out the non-admin user
-        return redirect()->route('login')->with('error', 'You do not have permission to access the admin dashboard.');
+
+        Auth::guard('admin')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        $request->session()->put('admin_two_factor_pending_id', $admin->id);
+        $request->session()->put('admin_two_factor_remember', $request->boolean('remember'));
+
+        if ($admin->hasTwoFactorEnabled()) {
+            return redirect()->route('admin.two-factor.challenge');
+        }
+
+        return redirect()->route('admin.two-factor.setup')->with('status', 'Set up Google Authenticator to finish signing in.');
     }
 
-
-
-    /**
-     * The user has logged out of the application.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return mixed
-     */
-    protected function loggedOut(Request $request)
+    public function logout(Request $request)
     {
+        Auth::guard('admin')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
         return redirect()->route('admin.login');
     }
-
-   /**
-     * Get the guard to be used during authentication.
-     *
-     * @return \Illuminate\Contracts\Auth\StatefulGuard
-     */
-    protected function guard()
-    {
-        return Auth::guard("admin");
-    }
-
-   
 }

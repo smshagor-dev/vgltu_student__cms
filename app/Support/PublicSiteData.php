@@ -214,7 +214,7 @@ class PublicSiteData
                 'class_routine_text' => 'Class Routine',
                 'class_routine_link' => '/class_routine',
                 'university_profile_text' => 'University Profile',
-                'university_profile_link' => '/university_profile',
+                'university_profile_link' => '/university-student-profile',
                 'about_university_menu_text' => 'Universities',
                 'about_university_title' => 'Universities',
                 'about_university_content' => null,

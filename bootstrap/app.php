@@ -22,6 +22,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'university-student-profile/proxy',
             'university-student-profile/proxy/*',
         ]);
+
+        $middleware->alias([
+            'admin' => \App\Http\Middleware\AdminMiddleware::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
