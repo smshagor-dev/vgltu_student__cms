@@ -2,11 +2,11 @@
     <div class="card-body row g-4">
         <div class="col-md-6">
             <label class="form-label">Course Title</label>
-            <input type="text" name="title" class="form-control" value="{{ old('title', $course->title ?? '') }}" required>
+            <input type="text" name="title" id="course_title" class="form-control" value="{{ old('title', $course->title ?? '') }}" required>
         </div>
         <div class="col-md-6">
             <label class="form-label">Slug</label>
-            <input type="text" name="slug" class="form-control" value="{{ old('slug', $course->slug ?? '') }}" required>
+            <input type="text" name="slug" id="course_slug" class="form-control" value="{{ old('slug', $course->slug ?? '') }}" readonly required>
         </div>
         <div class="col-md-3">
             <label class="form-label">Display Order</label>
@@ -25,3 +25,36 @@
         </div>
     </div>
 </div>
+
+<script>
+    (function () {
+        const titleInput = document.getElementById('course_title');
+        const slugInput = document.getElementById('course_slug');
+
+        if (!titleInput || !slugInput) {
+            return;
+        }
+
+        const slugify = (value) => {
+            const normalized = value
+                .normalize('NFKD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .trim()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+
+            return normalized || 'course';
+        };
+
+        const syncSlug = () => {
+            slugInput.value = slugify(titleInput.value);
+        };
+
+        titleInput.addEventListener('input', syncSlug);
+
+        if (!slugInput.value) {
+            syncSlug();
+        }
+    })();
+</script>

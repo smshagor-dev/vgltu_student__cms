@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\HomepageCourse;
 use App\Support\PublicSiteData;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class HomepageCourseController extends Controller
@@ -48,6 +49,10 @@ class HomepageCourseController extends Controller
 
     private function validated(Request $request, ?HomepageCourse $course = null): array
     {
+        $request->merge([
+            'slug' => $this->generateUniqueSlug($request->input('title', ''), $course),
+        ]);
+
         return $request->validate([
             'title' => 'required|string|max:255',
             'slug' => ['required', 'string', 'max:255', Rule::unique('homepage_courses', 'slug')->ignore($course?->id)],
@@ -58,5 +63,26 @@ class HomepageCourseController extends Controller
             'display_order' => (int) $request->input('display_order', 0),
             'is_active' => $request->boolean('is_active'),
         ];
+    }
+
+    private function generateUniqueSlug(string $title, ?HomepageCourse $course = null): string
+    {
+        $baseSlug = Str::slug($title);
+        $baseSlug = $baseSlug !== '' ? Str::limit($baseSlug, 255, '') : 'course';
+        $slug = $baseSlug;
+        $counter = 2;
+
+        while (
+            HomepageCourse::query()
+                ->where('slug', $slug)
+                ->when($course, fn ($query) => $query->whereKeyNot($course->id))
+                ->exists()
+        ) {
+            $suffix = '-' . $counter;
+            $slug = Str::limit($baseSlug, 255 - strlen($suffix), '') . $suffix;
+            $counter++;
+        }
+
+        return $slug;
     }
 }
