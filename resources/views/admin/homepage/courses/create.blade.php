@@ -2,12 +2,12 @@
 
 @section('content')
 <div class="container-fluid">
-    <h2 class="mb-4">Add Course</h2>
+    <h2 class="mb-4">Add Department</h2>
     <form method="POST" action="{{ route('admin.homepage.courses.store') }}">
         @csrf
         @include('admin.homepage.courses._form', ['course' => $course])
         <div class="mt-3 admin-actions-inline">
-            <button class="btn btn-primary">Create Course</button>
+            <button class="btn btn-primary">Create Department</button>
             <a href="{{ route('admin.homepage.pages.courses.edit') }}" class="btn btn-outline-primary">Back</a>
         </div>
     </form>

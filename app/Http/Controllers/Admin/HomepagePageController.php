@@ -50,7 +50,7 @@ class HomepagePageController extends Controller
 
         return view('admin.homepage.pages.edit', [
             'pageKey' => 'courses',
-            'pageLabel' => 'Course Page',
+            'pageLabel' => 'Department Page',
             'settings' => $settings,
             'courses' => HomepageCourse::query()->orderBy('display_order')->orderBy('title')->get(),
         ]);
@@ -75,7 +75,7 @@ class HomepagePageController extends Controller
         $settings->save();
         PublicSiteData::clearCache();
 
-        return redirect()->route('admin.homepage.pages.courses.edit')->with('success', 'Course page updated successfully.');
+        return redirect()->route('admin.homepage.pages.courses.edit')->with('success', 'Department page updated successfully.');
     }
 
     private function settings(): WebsiteSetting
@@ -83,8 +83,8 @@ class HomepagePageController extends Controller
         return WebsiteSetting::query()->first() ?? new WebsiteSetting([
             'about_university_menu_text' => 'Universities',
             'about_university_title' => 'Universities',
-            'courses_menu_text' => 'Courses',
-            'courses_title' => 'Courses',
+            'courses_menu_text' => 'Department',
+            'courses_title' => 'Department',
         ]);
     }
 }

@@ -65,8 +65,9 @@ Route::get('/all-photo-galleries', [WelcomeController::class, 'allPhotoCategorie
 Route::get('/all-video-galleries', [WelcomeController::class, 'allVideoCategories'])->name('video-galleries.all');
 Route::get('/study-destinations/{slug}', [StudyDestinationController::class, 'show'])->name('study-destinations.show');
 Route::view('/about-university', 'about-university')->name('about-university');
-Route::get('/courses', [CoursePageController::class, 'index'])->name('courses.page');
-Route::get('/courses/{course:slug}', [CoursePageController::class, 'show'])->name('courses.show');
+Route::get('/department', [CoursePageController::class, 'index'])->name('department.page');
+Route::get('/department/{course:slug}', [CoursePageController::class, 'show'])->name('department.show');
+Route::view('/courses', 'course-page')->name('courses.page');
 Route::view('/contact-us', 'contact')->name('contact.page');
 Route::post('/contact-messages', [ContactMessageController::class, 'store'])->name('contact-messages.store');
 

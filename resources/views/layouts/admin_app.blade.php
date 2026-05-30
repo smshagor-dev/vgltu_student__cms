@@ -1106,7 +1106,7 @@
                 <div class="nav-submenu">
                     <a href="{{ route('admin.homepage.settings.edit') }}" class="{{ request()->routeIs('admin.homepage.settings.edit') ? 'is-active' : '' }}" data-menu-item><i class="fas fa-sliders"></i> Frontend Settings</a>
                     <a href="{{ route('admin.homepage.pages.about-university.edit') }}" class="{{ request()->routeIs('admin.homepage.pages.about-university.*') ? 'is-active' : '' }}" data-menu-item><i class="fas fa-university"></i> Universities</a>
-                    <a href="{{ route('admin.homepage.pages.courses.edit') }}" class="{{ request()->routeIs('admin.homepage.pages.courses.*') ? 'is-active' : '' }}" data-menu-item><i class="fas fa-book-open"></i> Course Page</a>
+                    <a href="{{ route('admin.homepage.pages.courses.edit') }}" class="{{ request()->routeIs('admin.homepage.pages.courses.*') ? 'is-active' : '' }}" data-menu-item><i class="fas fa-building"></i> Department Page</a>
                     <a href="{{ route('admin.homepage.hero.edit') }}" class="{{ request()->routeIs('admin.homepage.hero.edit') ? 'is-active' : '' }}" data-menu-item><i class="fas fa-star"></i> Hero Section</a>
                     {{-- <a href="{{ route('admin.homepage.menus.index') }}" class="{{ request()->routeIs('admin.homepage.menus.*') ? 'is-active' : '' }}" data-menu-item><i class="fas fa-bars"></i> Header Menus</a> --}}
                     {{-- <a href="{{ route('admin.homepage.destinations.index') }}" class="{{ request()->routeIs('admin.homepage.destinations.*') ? 'is-active' : '' }}" data-menu-item><i class="fas fa-location-dot"></i> Study Destinations</a> --}}

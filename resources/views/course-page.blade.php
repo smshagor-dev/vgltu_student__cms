@@ -115,60 +115,6 @@
         line-height: 1.7;
     }
 
-    .course-detail-card {
-        width: 100%;
-        max-width: 100%;
-        overflow: hidden;
-        padding: 30px;
-        border-radius: 30px;
-        background: linear-gradient(180deg, #fffaf7 0%, #ffffff 100%);
-        border: 1px solid rgba(35, 23, 38, 0.08);
-        box-shadow: 0 18px 38px rgba(59, 33, 53, 0.08);
-    }
-
-    .course-detail-card__content {
-        width: 100%;
-        max-width: 100%;
-        color: #4a3f4c;
-        font-size: 1rem;
-        line-height: 1.9;
-        overflow-wrap: anywhere;
-    }
-
-    .course-detail-card__content img,
-    .course-detail-card__content iframe,
-    .course-detail-card__content video,
-    .course-detail-card__content table {
-        max-width: 100%;
-    }
-
-    .course-detail-card__content img {
-        width: 100%;
-        height: auto;
-        display: block;
-        object-fit: cover;
-        border-radius: 20px;
-    }
-
-    .course-detail-card__content iframe,
-    .course-detail-card__content video {
-        width: 100%;
-        display: block;
-        border: 0;
-    }
-
-    .course-detail-card__content table {
-        display: block;
-        overflow-x: auto;
-    }
-
-    .course-detail-card__content h2,
-    .course-detail-card__content h3,
-    .course-detail-card__content h4 {
-        color: #241726;
-        margin-top: 0;
-    }
-
     .course-detail-empty {
         text-align: center;
         padding: 46px 26px;
@@ -201,7 +147,7 @@
         }
 
         .course-detail-hero__content,
-        .course-detail-card {
+        .course-detail-empty {
             padding: 22px 16px;
         }
 
@@ -239,24 +185,16 @@
                 <div class="course-detail-hero__media"></div>
                 <div class="course-detail-hero__overlay"></div>
                 <div class="course-detail-hero__content">
-                    <span class="course-detail-hero__eyebrow"><i class="fas fa-building"></i>Department Details</span>
-                    <h1>{{ $course->title }}</h1>
-                    <p>Explore complete details, overview, and important information about {{ $course->title }} from this page.</p>
+                    <span class="course-detail-hero__eyebrow"><i class="fas fa-book-open"></i>Course Page</span>
+                    <h1>Course</h1>
+                    <p>Course content is being prepared and will be published here soon.</p>
                 </div>
             </div>
 
-            @if (filled(strip_tags((string) $course->description)))
-                <div class="course-detail-card">
-                    <div class="course-detail-card__content">
-                        {!! $course->description !!}
-                    </div>
-                </div>
-            @else
-                <div class="course-detail-empty">
-                    <strong>Coming Soon</strong>
-                    <span>Department details will appear here once the content is added from the admin CMS.</span>
-                </div>
-            @endif
+            <div class="course-detail-empty">
+                <strong>Coming Soon</strong>
+                <span>Course page content will appear here soon.</span>
+            </div>
         </div>
     </div>
 </section>

@@ -1,7 +1,7 @@
 <div class="card shadow-sm border-0">
     <div class="card-body row g-4">
         <div class="col-md-6">
-            <label class="form-label">Course Title</label>
+            <label class="form-label">Department Title</label>
             <input type="text" name="title" id="course_title" class="form-control" value="{{ old('title', $course->title ?? '') }}" required>
         </div>
         <div class="col-md-6">
@@ -20,7 +20,7 @@
             </div>
         </div>
         <div class="col-12">
-            <label class="form-label">Course Description</label>
+            <label class="form-label">Department Description</label>
             <textarea name="description" id="course_description" class="form-control" rows="12">{{ old('description', $course->description ?? '') }}</textarea>
         </div>
     </div>

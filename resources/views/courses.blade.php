@@ -3,7 +3,7 @@
 @section('content')
 @php
     $settings = $publicShell['settings'] ?? [];
-    $pageTitle = $settings['courses_title'] ?? 'Courses';
+    $pageTitle = $settings['courses_title'] ?? 'Department';
     $pageHeaderUrl = $settings['courses_header_url'] ?? asset('1726497377.jpg');
 @endphp
 
@@ -258,19 +258,19 @@
                 <div class="page-courses-hero__media"></div>
                 <div class="page-courses-hero__overlay"></div>
                 <div class="page-courses-hero__content">
-                    <span class="page-courses-hero__eyebrow"><i class="fas fa-book-open"></i>Course Page</span>
+                    <span class="page-courses-hero__eyebrow"><i class="fas fa-building"></i>Department Page</span>
                     <h1>{{ $pageTitle }}</h1>
-                    <p>Explore the latest course-related information, guidance, and updates published.</p>
+                    <p>Explore the latest department-related information, guidance, and updates published.</p>
                 </div>
             </div>
 
             @if (($courses ?? collect())->isNotEmpty())
                 <div class="course-grid">
                     @foreach ($courses as $course)
-                        <a class="course-card" href="{{ route('courses.show', $course) }}">
-                            <span class="course-card__eyebrow"><i class="fas fa-book-open"></i> Course</span>
+                        <a class="course-card" href="{{ route('department.show', $course) }}">
+                            <span class="course-card__eyebrow"><i class="fas fa-building"></i> Department</span>
                             <h3>{{ $course->title }}</h3>
-                            <p>{{ \Illuminate\Support\Str::limit(trim(strip_tags((string) $course->description)), 160) ?: 'Full course details are available inside this page.' }}</p>
+                            <p>{{ \Illuminate\Support\Str::limit(trim(strip_tags((string) $course->description)), 160) ?: 'Full department details are available inside this page.' }}</p>
                             <span class="course-card__link">Open Details <i class="fas fa-arrow-right"></i></span>
                         </a>
                     @endforeach
@@ -278,7 +278,7 @@
             @else
                 <div class="page-courses-empty">
                     <strong>Coming Soon</strong>
-                    <span>Course cards will appear here once they are added from the admin CMS.</span>
+                    <span>Department cards will appear here once they are added from the admin CMS.</span>
                 </div>
             @endif
         </div>

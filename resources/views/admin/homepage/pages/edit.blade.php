@@ -66,10 +66,10 @@
         <section class="admin-panel">
             <div class="admin-toolbar">
                 <div class="admin-toolbar__title">
-                    <h3>Course Cards</h3>
-                    <p>Add individual courses here. Frontend course page will show them as clickable cards.</p>
+                    <h3>Department Cards</h3>
+                    <p>Add individual departments here. The frontend department page will show them as clickable cards.</p>
                 </div>
-                <a href="{{ route('admin.homepage.courses.create') }}" class="btn btn-primary">Add Course</a>
+                <a href="{{ route('admin.homepage.courses.create') }}" class="btn btn-primary">Add Department</a>
             </div>
 
             <div class="admin-table-wrap">
@@ -95,12 +95,12 @@
                                     <form action="{{ route('admin.homepage.courses.destroy', $course) }}" method="POST" class="d-inline">
                                         @csrf
                                         @method('DELETE')
-                                        <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this course?')">Delete</button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this department?')">Delete</button>
                                     </form>
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="5" class="text-center py-4">No courses added yet.</td></tr>
+                            <tr><td colspan="5" class="text-center py-4">No departments added yet.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

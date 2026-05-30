@@ -30,6 +30,9 @@
         'home' => 'fas fa-home',
         'universities' => 'fas fa-university',
         'university' => 'fas fa-university',
+        'department' => 'fas fa-building',
+        'departments' => 'fas fa-building',
+        'course' => 'fas fa-book-open',
         'courses' => 'fas fa-book-open',
         'contact us' => 'fas fa-envelope',
         'contact' => 'fas fa-envelope',
@@ -122,6 +125,18 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
     @vite(['resources/css/homepage.css', 'resources/sass/app.scss', 'resources/js/app.js'])
     <style>
+        html,
+        body {
+            width: 100%;
+            overflow-x: hidden;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
         .edu-login-modal .modal-content {
             border: 0;
             border-radius: 24px;
@@ -909,6 +924,15 @@
                 padding-bottom: 92px;
             }
 
+            .edu-topbar .container,
+            .edu-header .container,
+            .edu-footer .container {
+                width: 100%;
+                max-width: 1200px;
+                padding-left: 14px;
+                padding-right: 14px;
+            }
+
             .edu-profile-trigger.edu-mobile-tool {
                 display: none !important;
             }
@@ -1024,6 +1048,8 @@
                 align-items: center;
                 gap: 10px;
                 margin-left: auto;
+                max-width: 100%;
+                flex-shrink: 0;
             }
 
             .edu-mobile-header .edu-notification-btn {
@@ -1117,6 +1143,7 @@
 
             .edu-mobile-footer-nav__item span {
                 line-height: 1.2;
+                overflow-wrap: anywhere;
             }
         }
 
@@ -1127,6 +1154,60 @@
 
             .edu-toggler--mobile {
                 display: inline-flex !important;
+            }
+        }
+
+        @media (max-width: 767.98px) {
+            .edu-navbar {
+                width: 100%;
+                max-width: 100%;
+                overflow: hidden;
+                border-radius: 22px;
+                padding: 0.75rem;
+            }
+
+            .edu-brand {
+                max-width: calc(100% - 64px);
+            }
+
+            .edu-brand span {
+                white-space: normal;
+                overflow: visible;
+                text-overflow: unset;
+                overflow-wrap: anywhere;
+            }
+
+            .edu-topbar__links a {
+                max-width: 100%;
+                text-align: center;
+            }
+
+            .edu-auth-actions {
+                width: 100%;
+                flex-wrap: wrap;
+                justify-content: stretch;
+                transform: none;
+            }
+
+            .edu-auth-btn {
+                flex: 1 1 160px;
+                width: 100%;
+            }
+
+            .edu-mobile-footer-nav {
+                left: 10px;
+                right: 10px;
+                bottom: 10px;
+                padding-left: 8px;
+                padding-right: 8px;
+            }
+
+            .edu-mobile-footer-nav__item {
+                min-width: 0;
+            }
+
+            .edu-mobile-footer-nav__item span {
+                text-align: center;
             }
         }
     </style>

@@ -36,7 +36,9 @@ class PublicSiteData
 
             $normalizedMenus = self::ensureAboutUniversityMenu($normalizedMenus, $normalizedSettings);
             $normalizedMenus = self::ensureCoursesMenu($normalizedMenus, $normalizedSettings);
+            $normalizedMenus = self::ensureCourseLandingMenu($normalizedMenus);
             $normalizedMenus = self::ensureContactMenu($normalizedMenus);
+            $normalizedMenus = self::dedupeMenus($normalizedMenus);
 
             return [
                 'settings' => $normalizedSettings,
@@ -94,6 +96,9 @@ class PublicSiteData
             return $fallback;
         }
 
+        $coursesMenuText = trim((string) $settings->courses_menu_text);
+        $coursesTitle = trim((string) $settings->courses_title);
+
         return [
             'site_name' => $settings->site_name ?: $fallback['site_name'],
             'logo_url' => PublicAsset::url($settings->logo_path, $fallback['logo_url']),
@@ -111,8 +116,12 @@ class PublicSiteData
             'about_university_title' => $settings->about_university_title ?: $fallback['about_university_title'],
             'about_university_content' => $settings->about_university_content,
             'about_university_header_url' => PublicAsset::url($settings->about_university_header_path, $fallback['about_university_header_url']),
-            'courses_menu_text' => $fallback['courses_menu_text'],
-            'courses_title' => $settings->courses_title ?: $fallback['courses_title'],
+            'courses_menu_text' => in_array(strtolower($coursesMenuText), ['', 'course', 'courses', 'main course', 'mane course'], true)
+                ? $fallback['courses_menu_text']
+                : $settings->courses_menu_text,
+            'courses_title' => in_array(strtolower($coursesTitle), ['', 'course', 'courses'], true)
+                ? $fallback['courses_title']
+                : $settings->courses_title,
             'courses_content' => $settings->courses_content,
             'courses_header_url' => PublicAsset::url($settings->courses_header_path, $fallback['courses_header_url']),
             'search_placeholder' => $settings->search_placeholder ?: $fallback['search_placeholder'],
@@ -219,8 +228,8 @@ class PublicSiteData
                 'about_university_title' => 'Universities',
                 'about_university_content' => null,
                 'about_university_header_url' => asset('28020.png'),
-                'courses_menu_text' => 'Courses',
-                'courses_title' => 'Courses',
+                'courses_menu_text' => 'Department',
+                'courses_title' => 'Department',
                 'courses_content' => null,
                 'courses_header_url' => asset('28020.png'),
                 'search_placeholder' => 'Search universities or countries',
@@ -233,7 +242,8 @@ class PublicSiteData
             'menus' => [
                 ['title' => 'Home', 'url' => '/', 'target' => '_self', 'children' => []],
                 ['title' => 'Universities', 'url' => '#', 'target' => '_self', 'children' => []],
-                ['title' => 'Courses', 'url' => '/courses', 'target' => '_self', 'children' => []],
+                ['title' => 'Department', 'url' => '/department', 'target' => '_self', 'children' => []],
+                ['title' => 'Course', 'url' => '/courses', 'target' => '_self', 'children' => []],
                 ['title' => 'About', 'url' => '#about', 'target' => '_self', 'children' => []],
                 ['title' => 'Contact Us', 'url' => '/contact-us', 'target' => '_self', 'children' => []],
             ],
@@ -302,10 +312,10 @@ class PublicSiteData
         $hasCoursesMenu = false;
 
         $menus = array_map(function (array $menu) use (&$hasCoursesMenu, $settings) {
-            if (strtolower(trim((string) ($menu['title'] ?? ''))) === 'courses') {
+            if (in_array(strtolower(trim((string) ($menu['title'] ?? ''))), ['courses', 'course', 'department', 'departments'], true)) {
                 $hasCoursesMenu = true;
                 $menu['title'] = $settings['courses_menu_text'];
-                $menu['url'] = url('/courses');
+                $menu['url'] = url('/department');
                 $menu['target'] = '_self';
             }
 
@@ -318,12 +328,68 @@ class PublicSiteData
 
         array_splice($menus, min(2, count($menus)), 0, [[
             'title' => $settings['courses_menu_text'],
+            'url' => url('/department'),
+            'target' => '_self',
+            'children' => [],
+        ]]);
+
+        return $menus;
+    }
+
+    private static function ensureCourseLandingMenu(array $menus): array
+    {
+        $hasCourseLandingMenu = false;
+
+        $menus = array_map(function (array $menu) use (&$hasCourseLandingMenu) {
+            $title = strtolower(trim((string) ($menu['title'] ?? '')));
+            $url = strtolower(trim((string) ($menu['url'] ?? '')));
+
+            if (
+                in_array($title, ['course', 'courses page', 'course page'], true)
+                || str_ends_with($url, '/courses')
+            ) {
+                $hasCourseLandingMenu = true;
+                $menu['title'] = 'Course';
+                $menu['url'] = url('/courses');
+                $menu['target'] = '_self';
+            }
+
+            return $menu;
+        }, $menus);
+
+        if ($hasCourseLandingMenu) {
+            return $menus;
+        }
+
+        array_splice($menus, min(3, count($menus)), 0, [[
+            'title' => 'Course',
             'url' => url('/courses'),
             'target' => '_self',
             'children' => [],
         ]]);
 
         return $menus;
+    }
+
+    private static function dedupeMenus(array $menus): array
+    {
+        $seen = [];
+        $deduped = [];
+
+        foreach ($menus as $menu) {
+            $key = strtolower(trim((string) ($menu['title'] ?? '')))
+                . '|' .
+                strtolower(trim((string) ($menu['url'] ?? '')));
+
+            if (isset($seen[$key])) {
+                continue;
+            }
+
+            $seen[$key] = true;
+            $deduped[] = $menu;
+        }
+
+        return array_values($deduped);
     }
 
     private static function fallbackHomepage(): array

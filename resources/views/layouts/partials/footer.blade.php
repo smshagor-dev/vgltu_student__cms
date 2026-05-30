@@ -2,7 +2,8 @@
     $footerSystemLinks = [
         ['label' => 'Home', 'url' => route('welcome')],
         ['label' => 'University', 'url' => route('about-university')],
-        ['label' => 'Courses', 'url' => route('courses.page')],
+        ['label' => 'Department', 'url' => route('department.page')],
+        ['label' => 'Course', 'url' => route('courses.page')],
         ['label' => 'Contact', 'url' => route('contact.page')],
     ];
     $footerServiceLinks = [
@@ -22,10 +23,14 @@
     .edu-footer {
         margin-top: 4rem;
         padding: 0 0 1.2rem;
+        width: 100%;
     }
 
     .edu-footer__panel {
         position: relative;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
         padding: 2.2rem 2rem 1.1rem;
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 252, 250, 0.95));
         border: 1px solid rgba(255, 255, 255, 0.85);
@@ -169,6 +174,7 @@
         display: flex;
         flex-wrap: wrap;
         gap: 12px;
+        width: 100%;
     }
 
     .edu-footer__outline-btn {
@@ -372,6 +378,12 @@
 
         .edu-footer__cta-actions {
             flex-direction: column;
+        }
+
+        .edu-footer__signup-btn,
+        .edu-footer__outline-btn {
+            width: 100%;
+            max-width: 100%;
         }
 
         .edu-footer__cta,
