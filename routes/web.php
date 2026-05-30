@@ -101,8 +101,8 @@ Route::post('/login', [LoginController::class, 'login']);
 
 Route::get('/logout', [LoginController::class, 'logout'])->name('logout.get');
 
-Route::get('/user/edit', [UserController::class, 'edit'])->name('user.edit');
-Route::put('/user/update', [UserController::class, 'update'])->name('user.update');
+Route::get('/user/edit', [UserController::class, 'edit'])->name('user.edit')->middleware('auth');
+Route::put('/user/update', [UserController::class, 'update'])->name('user.update')->middleware('auth');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/medical-status', [HomeController::class, 'view'])->name('user.medicalStatus'); 

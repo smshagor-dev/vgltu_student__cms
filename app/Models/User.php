@@ -29,8 +29,8 @@ class User extends Authenticatable
     
     protected $fillable = [
         'room_number', 'full_name', 'email', 'mobile_number',
-        'country', 'religion', 'gender', 'course_type', 
-        'department', 'course_year','approved','course_language', 'registration_password_plain',
+        'country', 'address', 'religion', 'gender', 'date_of_birth', 'course_type',
+        'department', 'course_year', 'approved', 'course_language', 'photo', 'password', 'registration_password_plain',
     ];
 
     /**
@@ -52,6 +52,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'date_of_birth' => 'date',
             'password' => 'hashed',
             'browser_notifications_enabled' => 'boolean',
             'registration_password_plain' => 'encrypted',

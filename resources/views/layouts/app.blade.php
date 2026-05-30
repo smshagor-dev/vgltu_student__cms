@@ -1354,7 +1354,7 @@
                                             <i class="far fa-bell"></i> Notifications
                                         </button>
                                         <a class="dropdown-item" href="{{ route('user.edit') }}"><i class="fas fa-user-edit"></i> Edit Profile</a>
-                                        <a class="dropdown-item" href="{{ route('students_data.index') }}"><i class="far fa-id-card"></i> Personal Data</a>
+                                        <a class="dropdown-item" href="{{ route('students_data.index') }}"><i class="far fa-id-card"></i> My Documents</a>
                                         <a class="dropdown-item" href="{{ route('user.medicalStatus') }}"><i class="fas fa-heartbeat"></i> Medical Status</a>
                                         <div class="dropdown-divider"></div>
                                         <a class="dropdown-item edu-profile-menu__logout" href="{{ route('logout.get') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
@@ -1736,7 +1736,7 @@
                     </div>
                     <a class="edu-mobile-drawer__card" href="{{ route('home') }}"><i class="fas fa-th-large"></i><div><strong>Dashboard</strong><span>Open your student dashboard.</span></div></a>
                     <a class="edu-mobile-drawer__card" href="{{ route('user.edit') }}"><i class="fas fa-user-edit"></i><div><strong>Edit Profile</strong><span>Update your account information.</span></div></a>
-                    <a class="edu-mobile-drawer__card" href="{{ route('students_data.index') }}"><i class="far fa-id-card"></i><div><strong>Personal Data</strong><span>See your student personal records.</span></div></a>
+                    <a class="edu-mobile-drawer__card" href="{{ route('students_data.index') }}"><i class="far fa-id-card"></i><div><strong>My Documents</strong><span>See your student personal records.</span></div></a>
                     <a class="edu-mobile-drawer__card" href="{{ route('user.medicalStatus') }}"><i class="fas fa-heartbeat"></i><div><strong>Medical Status</strong><span>Check and update your medical status.</span></div></a>
                     <a class="edu-mobile-drawer__card" href="{{ route('logout.get') }}"><i class="fas fa-sign-out-alt"></i><div><strong>Logout</strong><span>Sign out from your account.</span></div></a>
                 </div>

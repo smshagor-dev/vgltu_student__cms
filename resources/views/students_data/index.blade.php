@@ -474,22 +474,18 @@
         <div class="student-docs-toolbar">
             <div class="student-docs-summary">
                 <div class="student-docs-stat">
-                    <span>Total Records</span>
-                    <strong>{{ $students->count() }}</strong>
-                </div>
-                <div class="student-docs-stat">
                     <span>Document Types</span>
                     <strong>Passport, Visa, Green Card</strong>
                 </div>
                 <div class="student-docs-stat">
-                    <span>Owner</span>
+                    <span>Student Name</span>
                     <strong>{{ optional($students->first())->full_name ?: auth()->user()->full_name }}</strong>
                 </div>
             </div>
 
-            <a href="{{ route('students_data.create') }}" class="student-docs-action">
-                <i class="fas fa-cloud-upload-alt"></i>
-                <span>Submit Your Documents</span>
+            <a href="{{ $students->isNotEmpty() ? route('students_data.edit', $students->first()->id) : route('students_data.create') }}" class="student-docs-action">
+                <i class="fas {{ $students->isNotEmpty() ? 'fa-pen-to-square' : 'fa-cloud-upload-alt' }}"></i>
+                <span>{{ $students->isNotEmpty() ? 'Update Your Documents' : 'Submit Your Documents' }}</span>
             </a>
         </div>
 

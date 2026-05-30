@@ -81,6 +81,11 @@
         margin-top: 24px;
     }
 
+    .user-edit-alert {
+        margin-bottom: 18px;
+        border-radius: 16px;
+    }
+
     .user-edit-header {
         display: flex;
         align-items: flex-start;
@@ -431,7 +436,11 @@
         </section>
 
         @if (session('success'))
-            <div class="alert alert-success">{{ session('success') }}</div>
+            <div class="alert alert-success user-edit-alert">{{ session('success') }}</div>
+        @endif
+
+        @if (session('error'))
+            <div class="alert alert-danger user-edit-alert">{{ session('error') }}</div>
         @endif
 
         @if ($errors->any())
@@ -463,28 +472,30 @@
                     $profilePhoto = !empty($user->photo) ? asset('storage/' . $user->photo) : asset('default-avatar.png');
                 @endphp
 
-                <div class="user-edit-photo-panel">
-                    <div class="user-edit-photo-frame">
-                        <img src="{{ $profilePhoto }}" alt="{{ $user->full_name }}" id="profilePhotoPreview" onerror="this.style.display='none'; document.getElementById('profilePhotoFallback').style.display='flex';">
-                        <div class="user-edit-photo-fallback" id="profilePhotoFallback" style="display:none;">
-                            <i class="fas fa-user"></i>
+                @if ($photoEditable)
+                    <div class="user-edit-photo-panel">
+                        <div class="user-edit-photo-frame">
+                            <img src="{{ $profilePhoto }}" alt="{{ $user->full_name }}" id="profilePhotoPreview" onerror="this.style.display='none'; document.getElementById('profilePhotoFallback').style.display='flex';">
+                            <div class="user-edit-photo-fallback" id="profilePhotoFallback" style="display:none;">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <label for="photo" class="user-edit-photo-upload" title="Upload new photo">
+                                <i class="fas fa-camera"></i>
+                            </label>
                         </div>
-                        <label for="photo" class="user-edit-photo-upload" title="Upload new photo">
-                            <i class="fas fa-camera"></i>
-                        </label>
-                    </div>
 
-                    <div class="user-edit-photo-copy">
-                        <h3>Profile Photo</h3>
-                        <p>Your current photo is shown here. Choose a new image to instantly preview it before saving the profile.</p>
-                        <span class="user-edit-photo-chip"><i class="fas fa-image"></i> JPG, PNG, or WEBP up to 2 MB</span>
-                        <div class="user-edit-photo-name" id="profilePhotoFileName">Current photo ready</div>
-                        <input type="file" name="photo" id="photo" class="user-edit-photo-input" accept="image/jpeg,image/png,image/webp">
-                        @error('photo')
-                            <div class="text-danger small mt-2">{{ $message }}</div>
-                        @enderror
+                        <div class="user-edit-photo-copy">
+                            <h3>Profile Photo</h3>
+                            <p>Your current photo is shown here. Choose a new image to instantly preview it before saving the profile.</p>
+                            <span class="user-edit-photo-chip"><i class="fas fa-image"></i> JPG, PNG, or WEBP up to 2 MB</span>
+                            <div class="user-edit-photo-name" id="profilePhotoFileName">Current photo ready</div>
+                            <input type="file" name="photo" id="photo" class="user-edit-photo-input" accept="image/jpeg,image/png,image/webp">
+                            @error('photo')
+                                <div class="text-danger small mt-2">{{ $message }}</div>
+                            @enderror
+                        </div>
                     </div>
-                </div>
+                @endif
 
                 <div class="user-edit-meta">
                     <div class="user-edit-meta-item">
@@ -501,15 +512,17 @@
                     </div>
                 </div>
 
-                @if (count($editableFields) > 0)
+                @if (count($profileEditableFields) > 0)
                     <div class="user-edit-grid">
-                        @foreach ($editableFields as $field)
+                        @foreach ($profileEditableFields as $field)
                             @php
                                 $definition = $fieldDefinitions[$field];
-                                $value = old($field, $user->{$field});
+                                $value = old($field, $definition['type'] === 'date' && $user->{$field}
+                                    ? $user->{$field}->format('Y-m-d')
+                                    : $user->{$field});
                             @endphp
 
-                            <div class="user-edit-field">
+                            <div class="user-edit-field {{ !empty($definition['full_width']) ? 'user-edit-field--full' : '' }}">
                                 <label for="{{ $field }}">{{ $definition['label'] }}</label>
 
                                 @if ($definition['type'] === 'select')
@@ -523,6 +536,13 @@
                                             </option>
                                         @endforeach
                                     </select>
+                                @elseif ($definition['type'] === 'textarea')
+                                    <textarea
+                                        name="{{ $field }}"
+                                        id="{{ $field }}"
+                                        class="form-control user-edit-input"
+                                        rows="{{ $definition['rows'] ?? 4 }}"
+                                    >{{ $value }}</textarea>
                                 @else
                                     <input
                                         type="{{ $definition['type'] }}"
@@ -545,7 +565,7 @@
                     </div>
                 @else
                     <div class="user-edit-note">
-                        Admin has currently disabled profile field editing. You can still update your password below.
+                        Admin has currently disabled editable profile fields for your account.
                     </div>
                 @endif
 
@@ -634,69 +654,71 @@
         </section>
         </form>
 
-        <form method="POST" action="{{ route('user.update') }}">
-        @csrf
-        @method('PUT')
-        <input type="hidden" name="form_action" value="password">
+        @if ($passwordEditable)
+            <form method="POST" action="{{ route('user.update') }}">
+            @csrf
+            @method('PUT')
+            <input type="hidden" name="form_action" value="password">
 
-        <section class="user-edit-card">
-            <div class="user-edit-header">
-                <div>
-                    <h2>Password & Security</h2>
-                    <p>Use your current password to verify identity, then set and confirm a new password for your account.</p>
-                </div>
-                <span class="user-edit-badge"><i class="fas fa-shield-halved"></i> Secure Change</span>
-            </div>
-
-            <div class="user-edit-body">
-                <div class="user-edit-grid">
-                    <div class="user-edit-field">
-                        <label for="current_password">Old Password</label>
-                        <div class="user-edit-password-wrap">
-                            <input type="password" name="current_password" id="current_password" class="form-control user-edit-input" autocomplete="current-password">
-                            <button type="button" class="user-edit-eye" data-toggle-password="current_password" aria-label="Show old password">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </div>
-                        @error('current_password')
-                            <div class="text-danger small mt-1">{{ $message }}</div>
-                        @enderror
+            <section class="user-edit-card">
+                <div class="user-edit-header">
+                    <div>
+                        <h2>Password & Security</h2>
+                        <p>Use your current password to verify identity, then set and confirm a new password for your account.</p>
                     </div>
-
-                    <div class="user-edit-field">
-                        <label for="password">New Password</label>
-                        <div class="user-edit-password-wrap">
-                            <input type="password" name="password" id="password" class="form-control user-edit-input" autocomplete="new-password">
-                            <button type="button" class="user-edit-eye" data-toggle-password="password" aria-label="Show new password">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </div>
-                        @error('password')
-                            <div class="text-danger small mt-1">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="user-edit-field user-edit-field--full">
-                        <label for="password_confirmation">Confirm New Password</label>
-                        <div class="user-edit-password-wrap">
-                            <input type="password" name="password_confirmation" id="password_confirmation" class="form-control user-edit-input" autocomplete="new-password">
-                            <button type="button" class="user-edit-eye" data-toggle-password="password_confirmation" aria-label="Show confirm password">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </div>
-                        @error('password_confirmation')
-                            <div class="text-danger small mt-1">{{ $message }}</div>
-                        @enderror
-                    </div>
+                    <span class="user-edit-badge"><i class="fas fa-shield-halved"></i> Secure Change</span>
                 </div>
 
-                <div class="user-edit-actions">
-                    <p>Choose a strong password with at least 8 characters before submitting.</p>
-                    <button type="submit" class="btn btn-primary user-edit-btn">Change Password</button>
+                <div class="user-edit-body">
+                    <div class="user-edit-grid">
+                        <div class="user-edit-field">
+                            <label for="current_password">Old Password</label>
+                            <div class="user-edit-password-wrap">
+                                <input type="password" name="current_password" id="current_password" class="form-control user-edit-input" autocomplete="current-password">
+                                <button type="button" class="user-edit-eye" data-toggle-password="current_password" aria-label="Show old password">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            @error('current_password')
+                                <div class="text-danger small mt-1">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="user-edit-field">
+                            <label for="password">New Password</label>
+                            <div class="user-edit-password-wrap">
+                                <input type="password" name="password" id="password" class="form-control user-edit-input" autocomplete="new-password">
+                                <button type="button" class="user-edit-eye" data-toggle-password="password" aria-label="Show new password">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            @error('password')
+                                <div class="text-danger small mt-1">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="user-edit-field user-edit-field--full">
+                            <label for="password_confirmation">Confirm New Password</label>
+                            <div class="user-edit-password-wrap">
+                                <input type="password" name="password_confirmation" id="password_confirmation" class="form-control user-edit-input" autocomplete="new-password">
+                                <button type="button" class="user-edit-eye" data-toggle-password="password_confirmation" aria-label="Show confirm password">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            @error('password_confirmation')
+                                <div class="text-danger small mt-1">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="user-edit-actions">
+                        <p>Choose a strong password with at least 8 characters before submitting.</p>
+                        <button type="submit" class="btn btn-primary user-edit-btn">Change Password</button>
+                    </div>
                 </div>
-            </div>
-        </section>
-        </form>
+            </section>
+            </form>
+        @endif
     </div>
 </div>
 

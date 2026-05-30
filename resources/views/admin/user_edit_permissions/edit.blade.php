@@ -78,7 +78,7 @@
 <div class="admin-page">
     <section class="admin-hero-card">
         <h2>User Edit Permissions</h2>
-        <p>Choose exactly which profile fields students can update from `/user/edit`. Password stays separate and remains available as its own security field.</p>
+        <p>Choose exactly which profile fields students can update from `/user/edit`, including profile photo and password access.</p>
     </section>
 
     @if (session('success'))
@@ -120,7 +120,7 @@
         </div>
 
         <div class="permission-note mt-4">
-            Password is intentionally kept outside this list so it stays in a separate section on the student profile edit page.
+            Enabled fields appear on the student profile edit page. If `Password` is disabled here, the password change section will be hidden from students.
         </div>
 
         <div class="admin-actions-inline mt-4">

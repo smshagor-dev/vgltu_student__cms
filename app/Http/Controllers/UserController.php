@@ -13,6 +13,11 @@ use Illuminate\Support\Facades\Storage;
 
 class UserController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth')->only(['edit', 'update']);
+    }
+
     protected function adminUserCategoryQuery(string $category, $value = null)
     {
         $query = User::approved();
@@ -38,13 +43,29 @@ class UserController extends Controller
 
     public function edit()
     {
-        $user = Auth::user()->load('emergencyContacts'); // Get the currently authenticated user
+        $user = Auth::user();
+
+        if (! $user) {
+            return redirect()->route('login');
+        }
+
+        $user->load('emergencyContacts'); // Get the currently authenticated user
         $editableFields = UserProfileEditSettings::normalizeEditableFields(
             WebsiteSetting::query()->first()?->user_editable_fields
         );
         $fieldDefinitions = UserProfileEditSettings::fields();
+        $profileEditableFields = array_values(array_diff($editableFields, ['photo', 'password']));
+        $photoEditable = in_array('photo', $editableFields, true);
+        $passwordEditable = in_array('password', $editableFields, true);
 
-        return view('user.edit', compact('user', 'editableFields', 'fieldDefinitions')); // Return a view with the user data
+        return view('user.edit', compact(
+            'user',
+            'editableFields',
+            'fieldDefinitions',
+            'profileEditableFields',
+            'photoEditable',
+            'passwordEditable'
+        )); // Return a view with the user data
     }
 
     
@@ -63,8 +84,13 @@ class UserController extends Controller
         $editableFields = UserProfileEditSettings::normalizeEditableFields(
             WebsiteSetting::query()->first()?->user_editable_fields
         );
+        $profileEditableFields = array_values(array_diff($editableFields, ['photo', 'password']));
 
         if ($formAction === 'password') {
+            if (! in_array('password', $editableFields, true)) {
+                return redirect()->route('user.edit')->with('error', 'Password editing is currently disabled by admin.');
+            }
+
             $request->validate([
                 'current_password' => 'required',
                 'password' => 'required|min:8|confirmed',
@@ -72,15 +98,32 @@ class UserController extends Controller
         } else {
             $rules = [];
 
-            $rules['photo'] = 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048';
+            if (in_array('photo', $editableFields, true)) {
+                $rules['photo'] = 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048';
+            }
 
             if (in_array('email', $editableFields, true)) {
                 $rules['email'] = 'required|email|unique:users,email,' . Auth::id();
             }
 
-            foreach (['mobile_number', 'course_type', 'department', 'course_year', 'course_language', 'room_number'] as $field) {
+            $fieldRules = [
+                'full_name' => 'required|string|max:255',
+                'room_number' => 'required|string|max:50',
+                'mobile_number' => 'required|string|max:50',
+                'country' => 'required|in:Bangladesh,India,Nepal',
+                'address' => 'required|string|max:255',
+                'religion' => 'required|in:Muslim,Hindu,Boddho,Cristan',
+                'gender' => 'required|in:Male,Female',
+                'date_of_birth' => 'required|date',
+                'course_type' => 'required|in:Language,BSC,MSC,PHD',
+                'department' => 'required|string|max:255',
+                'course_year' => 'nullable|in:1st Year,2nd Year,3rd Year,Final Year',
+                'course_language' => 'nullable|in:English,Russian',
+            ];
+
+            foreach ($fieldRules as $field => $rule) {
                 if (in_array($field, $editableFields, true)) {
-                    $rules[$field] = 'nullable';
+                    $rules[$field] = $rule;
                 }
             }
 
@@ -93,6 +136,10 @@ class UserController extends Controller
 
         // Get the currently authenticated user
         $user = Auth::user();
+
+        if (! $user) {
+            return redirect()->route('login');
+        }
 
         if ($formAction === 'password') {
             if (! Hash::check($request->current_password, $user->password)) {
@@ -109,11 +156,11 @@ class UserController extends Controller
         }
 
         // Update only the fields that the user is allowed to edit
-        foreach ($editableFields as $field) {
+        foreach ($profileEditableFields as $field) {
             $user->{$field} = $request->input($field);
         }
 
-        if ($request->hasFile('photo')) {
+        if (in_array('photo', $editableFields, true) && $request->hasFile('photo')) {
             if ($user->photo && Storage::disk('public')->exists($user->photo)) {
                 Storage::disk('public')->delete($user->photo);
             }

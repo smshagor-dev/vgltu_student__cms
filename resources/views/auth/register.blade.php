@@ -455,11 +455,11 @@
                         @enderror
                     </div>
 
-                    <div class="register-field register-field--full">
+                    <div id="department_group" class="register-field register-field--full" style="display: none;">
                         <label for="department">Department</label>
                         <select class="form-control" id="department" name="department" onchange="toggleOtherDepartment()">
                             <option value="">Select Your Department</option>
-                            <option value="Prepetory Language Course" {{ old('department') == 'Prepetory Language Course' ? 'selected' : '' }}>Language Course</option>
+                            <option id="language_department_option" value="Prepetory Language Course" {{ old('department') == 'Prepetory Language Course' ? 'selected' : '' }}>Language Course</option>
                             <option value="Automobile" {{ old('department') == 'Automobile' ? 'selected' : '' }}>Automobile</option>
                             <option value="Forestry" {{ old('department') == 'Forestry' ? 'selected' : '' }}>Forestry</option>
                             <option value="Mechanical" {{ old('department') == 'Mechanical' ? 'selected' : '' }}>Mechanical</option>
@@ -577,42 +577,82 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const courseTypeSelect = document.getElementById('course_type');
+    const departmentGroup = document.getElementById('department_group');
     const departmentSelect = document.getElementById('department');
+    const languageDepartmentOption = document.getElementById('language_department_option');
     const courseLanguageGroup = document.getElementById('course_language_group');
     const courseYearGroup = document.getElementById('course_year_group');
     const form = document.querySelector('form');
+    const languageCourseDepartment = 'Prepetory Language Course';
+    const advancedCourseTypes = ['BSC', 'MSC', 'PHD'];
 
     const toggleFields = () => {
         const selectedCourseType = courseTypeSelect.value;
-        if (['BSC', 'MSC', 'PHD'].includes(selectedCourseType)) {
+
+        if (advancedCourseTypes.includes(selectedCourseType)) {
             courseLanguageGroup.style.display = 'block';
             courseYearGroup.style.display = 'block';
         } else {
             courseLanguageGroup.style.display = 'none';
             courseYearGroup.style.display = 'none';
+            const courseYearSelect = document.getElementById('course_year');
+            const courseLanguageSelect = document.getElementById('course_language');
+
+            if (courseYearSelect) {
+                courseYearSelect.value = '';
+            }
+
+            if (courseLanguageSelect) {
+                courseLanguageSelect.value = '';
+            }
+        }
+    };
+
+    const toggleDepartmentVisibility = () => {
+        const isAdvancedCourse = advancedCourseTypes.includes(courseTypeSelect.value);
+
+        departmentGroup.style.display = isAdvancedCourse ? 'block' : 'none';
+
+        if (languageDepartmentOption) {
+            languageDepartmentOption.hidden = isAdvancedCourse;
         }
     };
 
     const handleCourseDepartmentDependency = () => {
         if (courseTypeSelect.value === 'Language') {
-            departmentSelect.value = 'Prepetory Language Course';
-            departmentSelect.setAttribute('disabled', 'disabled');
+            departmentSelect.value = languageCourseDepartment;
+        } else if (advancedCourseTypes.includes(courseTypeSelect.value)) {
+            if (departmentSelect.value === languageCourseDepartment) {
+                departmentSelect.value = '';
+            }
         } else {
-            departmentSelect.removeAttribute('disabled');
+            departmentSelect.value = '';
         }
     };
 
-    form.addEventListener('submit', function () {
-        departmentSelect.removeAttribute('disabled');
-    });
+    const handleDepartmentCourseDependency = () => {
+        if (departmentSelect.value === languageCourseDepartment) {
+            courseTypeSelect.value = 'Language';
+            handleCourseDepartmentDependency();
+        }
+
+        toggleDepartmentVisibility();
+        toggleFields();
+    };
+
+    form.addEventListener('submit', handleCourseDepartmentDependency);
 
     courseTypeSelect.addEventListener('change', () => {
-        toggleFields();
         handleCourseDepartmentDependency();
+        toggleDepartmentVisibility();
+        toggleFields();
     });
 
-    toggleFields();
+    departmentSelect.addEventListener('change', handleDepartmentCourseDependency);
+
     handleCourseDepartmentDependency();
+    toggleDepartmentVisibility();
+    toggleFields();
 });
 </script>
 

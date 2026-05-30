@@ -75,6 +75,18 @@ class UserEmailService
         );
     }
 
+    public static function sendStudentDataRequired(User $user, string $actionUrl): bool
+    {
+        return self::send(
+            $user->email,
+            'Complete your student document data',
+            view('emails.student-data-required', [
+                'user' => $user,
+                'actionUrl' => $actionUrl,
+            ])->render()
+        );
+    }
+
     public static function sendPasswordReset(User $user, string $plainPassword): bool
     {
         return self::send(

@@ -68,15 +68,22 @@ class StudentsDataController extends Controller
 
     public function update(Request $request, $id)
     {
-        $request->validate([
-            'passport_number' => 'required|string|max:50',
-            'passport_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:20048',
-            'visa_start_date' => 'required|date',
-            'visa_expiry_date' => 'required|date|after_or_equal:visa_start_date',
-            'visa_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:20048',
-        ]);
-
         $studentData = StudentsData::findOrFail($id);
+
+        if (! $request->filled('visa_start_date') && $studentData->visa_start_date) {
+            $request->merge([
+                'visa_start_date' => $studentData->visa_start_date->format('Y-m-d'),
+            ]);
+        }
+
+        $request->validate([
+            'passport_number' => 'nullable|string|max:50',
+            'passport_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:20048',
+            'visa_start_date' => 'nullable|date',
+            'visa_expiry_date' => 'nullable|date|after_or_equal:visa_start_date',
+            'visa_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:20048',
+            'green_card_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:20048',
+        ]);
 
         // Ensure the user can only update their own data
         if (auth()->id() != $studentData->user_id) {
@@ -84,28 +91,46 @@ class StudentsDataController extends Controller
         }
 
         $originalVisaExpiryDate = optional($studentData->visa_expiry_date)?->toDateString();
-        $newVisaExpiryDate = $request->visa_expiry_date;
+        $updates = [];
 
-        $studentData->passport_number = $request->passport_number;
-        $studentData->visa_start_date = $request->visa_start_date;
-        $studentData->visa_expiry_date = $request->visa_expiry_date;
+        if ($request->filled('passport_number')) {
+            $updates['passport_number'] = $request->passport_number;
+        }
+
+        if ($request->filled('visa_start_date')) {
+            $updates['visa_start_date'] = $request->visa_start_date;
+        }
+
+        if ($request->filled('visa_expiry_date')) {
+            $updates['visa_expiry_date'] = $request->visa_expiry_date;
+        }
+
+        $newVisaExpiryDate = $updates['visa_expiry_date'] ?? $originalVisaExpiryDate;
 
         if ($originalVisaExpiryDate !== $newVisaExpiryDate) {
-            $studentData->visa_reminder_90_sent_at = null;
-            $studentData->visa_reminder_75_sent_at = null;
-            $studentData->visa_reminder_60_sent_at = null;
-            $studentData->visa_overdue_10_sent_at = null;
+            $updates['visa_reminder_90_sent_at'] = null;
+            $updates['visa_reminder_75_sent_at'] = null;
+            $updates['visa_reminder_60_sent_at'] = null;
+            $updates['visa_overdue_10_sent_at'] = null;
         }
 
         if ($request->hasFile('passport_photo')) {
-            $studentData->passport_photo = ImageCompressor::storeUploadedFile($request->file('passport_photo'), 'uploads/passport_photos');
+            $updates['passport_photo'] = ImageCompressor::storeUploadedFile($request->file('passport_photo'), 'uploads/passport_photos');
         }
 
         if ($request->hasFile('visa_photo')) {
-            $studentData->visa_photo = ImageCompressor::storeUploadedFile($request->file('visa_photo'), 'uploads/visa_photos');
+            $updates['visa_photo'] = ImageCompressor::storeUploadedFile($request->file('visa_photo'), 'uploads/visa_photos');
         }
 
-        $studentData->save();
+        if ($request->hasFile('green_card_photo')) {
+            $updates['green_card_photo'] = ImageCompressor::storeUploadedFile($request->file('green_card_photo'), 'uploads/green_card_photos');
+        }
+
+        if ($updates === []) {
+            return redirect()->route('students_data.edit', $studentData->id)->with('error', 'Please update at least one field before saving.');
+        }
+
+        $studentData->update($updates);
 
         return redirect()->route('students_data.index')->with('success', 'Student document details updated successfully.');
     }

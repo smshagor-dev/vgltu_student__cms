@@ -27,6 +27,7 @@
         margin-bottom: 24px;
         border-radius: 26px;
         color: #fff;
+        text-align: center;
         background:
             radial-gradient(circle at top right, rgba(125, 211, 252, 0.22), transparent 24%),
             linear-gradient(135deg, #0f172a 0%, #1d4ed8 58%, #0f766e 100%);
@@ -56,6 +57,7 @@
         font-weight: 700;
         letter-spacing: 0.08em;
         text-transform: uppercase;
+        justify-content: center;
     }
 
     .student-edit-hero h1 {
@@ -66,7 +68,7 @@
     }
 
     .student-edit-hero p {
-        margin: 10px 0 0;
+        margin: 10px auto 0;
         max-width: 760px;
         color: rgba(255, 255, 255, 0.82);
         line-height: 1.7;
@@ -209,68 +211,6 @@
         box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.12);
     }
 
-    .student-edit-preview-grid {
-        display: grid;
-        gap: 18px;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .student-edit-date-grid {
-        display: grid;
-        gap: 18px;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        margin-top: 24px;
-    }
-
-    .student-edit-date-card {
-        padding: 16px;
-        border: 1px solid #e7eef7;
-        border-radius: 18px;
-        background: #f8fbff;
-    }
-
-    .student-edit-date-card span {
-        display: block;
-        margin-bottom: 8px;
-        color: #475569;
-        font-size: 0.82rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    .student-edit-date-card strong {
-        color: #0f172a;
-        font-size: 1rem;
-        font-weight: 800;
-    }
-
-    .student-edit-preview {
-        padding: 16px;
-        border: 1px solid #e7eef7;
-        border-radius: 18px;
-        background: #f8fbff;
-    }
-
-    .student-edit-preview span {
-        display: block;
-        margin-bottom: 10px;
-        color: #475569;
-        font-size: 0.82rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    .student-edit-preview img {
-        width: 100%;
-        height: 190px;
-        object-fit: cover;
-        border-radius: 16px;
-        border: 1px solid #dbe4ee;
-        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
-    }
-
     .student-edit-actions {
         display: flex;
         align-items: center;
@@ -292,6 +232,7 @@
         display: flex;
         gap: 12px;
         flex-wrap: wrap;
+        width: 100%;
     }
 
     .student-edit-btn,
@@ -300,10 +241,11 @@
         align-items: center;
         justify-content: center;
         gap: 8px;
-        min-width: 180px;
+        flex: 1 1 240px;
+        min-width: 220px;
         border-radius: 14px;
         font-weight: 700;
-        padding: 0.85rem 1.3rem;
+        padding: 1rem 1.5rem;
         text-decoration: none;
     }
 
@@ -331,6 +273,10 @@
     @media (max-width: 767.98px) {
         .student-edit-page {
             padding-top: 20px;
+        }
+
+        .student-edit-side {
+            display: none;
         }
 
         .student-edit-hero,
@@ -366,14 +312,8 @@
             justify-content: center;
         }
 
-        .student-edit-fields,
-        .student-edit-date-grid,
-        .student-edit-preview-grid {
+        .student-edit-fields {
             grid-template-columns: 1fr;
-        }
-
-        .student-edit-preview img {
-            height: 220px;
         }
 
         .student-edit-actions,
@@ -404,14 +344,8 @@
             letter-spacing: 0.06em;
         }
 
-        .student-edit-side-item,
-        .student-edit-date-card,
-        .student-edit-preview {
+        .student-edit-side-item {
             padding: 12px 14px;
-        }
-
-        .student-edit-preview img {
-            height: 180px;
         }
     }
 </style>
@@ -428,13 +362,17 @@
             </div>
         @endif
 
-        @if (session('success'))
+                        @if (session('success'))
             <div class="alert alert-success">{{ session('success') }}</div>
+        @endif
+
+        @if (session('error'))
+            <div class="alert alert-danger">{{ session('error') }}</div>
         @endif
 
         <section class="student-edit-hero">
             <span class="student-edit-kicker"><i class="fas fa-pen-to-square"></i> Document Update</span>
-            <h1>Edit Student Documents</h1>
+            <h1>Edit Documents</h1>
             <p>Update your passport and visa information from one clean workspace. The layout is optimized for both desktop and mobile so your document details remain easy to review and edit.</p>
         </section>
 
@@ -467,15 +405,15 @@
                 </div>
 
                 <div class="student-edit-form__body">
-                    <form action="{{ route('students_data.update', $studentData->id) }}" method="POST" enctype="multipart/form-data">
+                    <form action="{{ route('students_data.update', $studentData->id) }}" method="POST" enctype="multipart/form-data" data-student-edit-form>
                         @csrf
                         @method('PUT')
 
                         <div class="student-edit-fields">
                             <div class="student-edit-field">
                                 <label for="passport_number">Passport Number</label>
-                                <input type="text" id="passport_number" name="passport_number" class="form-control student-edit-input @error('passport_number') is-invalid @enderror" value="{{ old('passport_number', $studentData->passport_number) }}" required>
-                                <small>Use the exact passport number from your current document.</small>
+                                <input type="text" id="passport_number" name="passport_number" class="form-control student-edit-input @error('passport_number') is-invalid @enderror" value="{{ old('passport_number', $studentData->passport_number) }}" data-original="{{ $studentData->passport_number }}">
+                                <small>Change this only if your passport number needs correction.</small>
                                 @error('passport_number')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -492,7 +430,8 @@
 
                             <div class="student-edit-field">
                                 <label for="visa_start_date">Visa Start Date</label>
-                                <input type="date" id="visa_start_date" name="visa_start_date" class="form-control student-edit-input @error('visa_start_date') is-invalid @enderror" value="{{ old('visa_start_date', $studentData->visa_start_date) }}" required>
+                                <input type="date" id="visa_start_date" name="visa_start_date" class="form-control student-edit-input @error('visa_start_date') is-invalid @enderror" value="{{ old('visa_start_date', optional($studentData->visa_start_date)->format('Y-m-d')) }}" data-original="{{ optional($studentData->visa_start_date)->format('Y-m-d') }}">
+                                <small>The current visa start date is shown here. Update only if it changed.</small>
                                 @error('visa_start_date')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -500,7 +439,8 @@
 
                             <div class="student-edit-field">
                                 <label for="visa_expiry_date">Visa Expiry Date</label>
-                                <input type="date" id="visa_expiry_date" name="visa_expiry_date" class="form-control student-edit-input @error('visa_expiry_date') is-invalid @enderror" value="{{ old('visa_expiry_date', $studentData->visa_expiry_date) }}" required>
+                                <input type="date" id="visa_expiry_date" name="visa_expiry_date" class="form-control student-edit-input @error('visa_expiry_date') is-invalid @enderror" value="{{ old('visa_expiry_date', optional($studentData->visa_expiry_date)->format('Y-m-d')) }}" data-original="{{ optional($studentData->visa_expiry_date)->format('Y-m-d') }}">
+                                <small>The current visa expiry date is shown here. Update only if needed.</small>
                                 @error('visa_expiry_date')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -514,27 +454,14 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
-                        </div>
 
-                        <div class="student-edit-date-grid">
-                            <div class="student-edit-date-card">
-                                <span>Current Visa Start Date</span>
-                                <strong>{{ \Carbon\Carbon::parse($studentData->visa_start_date)->format('d M Y') }}</strong>
-                            </div>
-                            <div class="student-edit-date-card">
-                                <span>Current Visa Expiry Date</span>
-                                <strong>{{ \Carbon\Carbon::parse($studentData->visa_expiry_date)->format('d M Y') }}</strong>
-                            </div>
-                        </div>
-
-                        <div class="student-edit-preview-grid mt-4">
-                            <div class="student-edit-preview">
-                                <span>Current Passport Photo</span>
-                                <img src="{{ asset('storage/' . $studentData->passport_photo) }}" alt="Current Passport Photo">
-                            </div>
-                            <div class="student-edit-preview">
-                                <span>Current Visa Photo</span>
-                                <img src="{{ asset('storage/' . $studentData->visa_photo) }}" alt="Current Visa Photo">
+                            <div class="student-edit-field student-edit-field--full">
+                                <label for="green_card_photo">Green Card Photo</label>
+                                <input type="file" id="green_card_photo" name="green_card_photo" class="form-control student-edit-input @error('green_card_photo') is-invalid @enderror">
+                                <small>Upload a new green card file only if you want to replace the existing one.</small>
+                                @error('green_card_photo')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
 
@@ -557,4 +484,30 @@
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.querySelector('[data-student-edit-form]');
+
+        if (!form) {
+            return;
+        }
+
+        form.addEventListener('submit', function () {
+            form.querySelectorAll('input[type="text"], input[type="date"]').forEach(function (input) {
+                const originalValue = input.dataset.original ?? '';
+
+                if (input.value === originalValue) {
+                    input.disabled = true;
+                }
+            });
+
+            form.querySelectorAll('input[type="file"]').forEach(function (input) {
+                if (!input.files || input.files.length === 0) {
+                    input.disabled = true;
+                }
+            });
+        });
+    });
+</script>
 @endsection

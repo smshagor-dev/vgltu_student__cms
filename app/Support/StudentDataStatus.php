@@ -3,7 +3,6 @@
 namespace App\Support;
 
 use App\Models\User;
-use App\Support\UserNotificationPublisher;
 
 class StudentDataStatus
 {
@@ -21,12 +20,16 @@ class StudentDataStatus
             return;
         }
 
+        $actionUrl = route('students_data.create');
+
         UserNotificationPublisher::sendToUser($user->id, [
             'type' => 'student_data_required',
             'title' => 'Complete your student document data',
             'description' => 'Passport, visa, and green card information is missing. Please update your student data now.',
-            'url' => route('students_data.create'),
+            'url' => $actionUrl,
             'icon' => 'fas fa-file-circle-exclamation',
         ]);
+
+        UserEmailService::sendStudentDataRequired($user, $actionUrl);
     }
 }
